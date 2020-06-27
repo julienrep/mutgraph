@@ -5,25 +5,25 @@ module Tests.MutGraph.Dijkstra (
     tests,
 )
 where
-import Prelude
+import Prelude hiding (map)
 import Test.HUnit
 import System.CPUTime
 import Control.DeepSeq
 import Control.Exception
-import qualified Data.Vector.Generic           as V
+import Control.Monad
+import Control.Monad.Primitive
+import MutState.State
+import MutGraph.Graph
+import MutGraph.AdjacencyList
 import MutGraph.Dijkstra
 import MutGraph.Impl.Dijkstra()
 import MutGraph.Impl.DijkstraStandalone()
-import MutGraph.Graph
+import MutGraph.Impl.ParseGraph()
 import MutContainers.Curry
 import MutContainers.Run
 import MutContainers.Vector
-import MutGraph.Impl.ParseGraph()
-import MutGraph.AdjacencyList
-import MutState.State
-import Control.Monad
-import Control.Monad.Primitive
 import MutContainers.Unbox
+import MutContainers.Bi.List
 
 dputs :: String -> IO ()
 dputs = putStr
@@ -40,19 +40,14 @@ tests = TestList [
 
 dijkstraFormatInputsM :: (MutMonad s IO, Foldable list) => 
     (list (Int, Int, Int), Int)
-    -> IO 
-    (
-    Mut s (AdjList Vector Int DVector VectorU Int Int),
-    Int)
+    -> IO (Mut s (AdjList Vector Int DVector VectorU Int Int), Int)
 dijkstraFormatInputsM (list, source) = do
     graph <- makeGraphFromEdgesM list
     let inputs = (graph, source)
     return inputs
 dijkstraRunM :: (MutMonad s IO) => 
-    (
-    Mut s (AdjList Vector Int DVector VectorU Int Int),
-    Int)
-    -> IO (Vector Int)
+    (Mut s (AdjList Vector Int DVector VectorU Int Int), Int)
+    -> IO (VectorU Int)
 dijkstraRunM inputs = do
     evaluate (rnf inputs)
     dputs $ "Dijkstra running on graph..." ++ lr
@@ -63,8 +58,8 @@ dijkstraRunM inputs = do
     let dt :: Double = fromIntegral (t2-t1) * 1e-12
     dputs $ "Dijkstra ran in " ++ show dt ++ " s" ++ lr
     return outputs
-dijkstraFormatOutputsM :: Vector Int -> IO [Int]
-dijkstraFormatOutputsM = return . map (\x -> if x < maxBound then x else 0) . V.toList
+dijkstraFormatOutputsM :: VectorU Int -> IO [Int]
+dijkstraFormatOutputsM = return . map (\x -> if x < maxBound then x else 0) . toList
 
 testDijkstraFromFile :: Test
 testDijkstraFromFile = TestCase $ do
@@ -130,7 +125,7 @@ test1 = TestCase $ do
             dputs $ ")" ++ lr
             )
     vout <- dijkstraSimpleM (fmapGraph (\(AAA a) -> a) mgraph) 1
-    dputs $ "output: " ++ show (V.toList vout) ++ lr
+    dputs $ "output: " ++ show (toList vout) ++ lr
     return ()
 
 newtype AAA a = AAA a

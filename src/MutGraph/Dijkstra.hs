@@ -11,13 +11,13 @@ import MutGraph.Graph
 import MutContainers.Bi.Map
 import MutState.State
 
-class Dijkstra g where
-    dijkstra :: (GraphReqs g k h e l z, Num e, Ord e) =>
-        g -> k -> l e
+class Dijkstra g labels where
+    dijkstra :: (GraphReqs g k h e l z, Num e, Ord e, k ~ KeyOf labels) =>
+        g -> k -> labels e
 
-class DijkstraSimpleM g where
-    dijkstraSimpleM :: (MutMonad s m, GraphReqs g k h e l z, Num e, Ord e) => 
-        Cst s g -> k -> m (l e)
+class DijkstraSimpleM g labels where
+    dijkstraSimpleM :: (MutMonad s m, GraphReqs g k h e l z, Num e, Ord e, k ~ KeyOf labels) => 
+        Cst s g -> k -> m (labels e)
 
 class DijkstraM g q scanned labels where
     dijkstraM :: (MutMonad s m, GraphReqs g k h e l z, k ~ KeyOf scanned, k ~ KeyOf labels, Num e, Ord e) => 

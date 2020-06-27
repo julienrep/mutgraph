@@ -205,6 +205,12 @@ instance (V.Vector v a) => Concat (Vec v) a where
 instance (V.Vector v a) => Replicate (Vec v) a where
     replicate = V.replicate
     {-# INLINE replicate #-}
+instance (V.Vector v a) => ToList (Vec v) a where
+    toList = V.toList
+    {-# INLINE toList #-}
+instance (V.Vector v a) => FromList (Vec v) a where
+    fromList = V.fromList
+    {-# INLINE fromList #-}
 instance (V.Vector v a) => MakeNew (Vec v) a where
     makeNew = V.empty
     {-# INLINE makeNew #-}

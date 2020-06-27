@@ -24,10 +24,10 @@ library
       MutGraph.Graph
       MutGraph.AdjacencyList
       MutGraph.Dijkstra
-      MutGraph.DFS
+      MutGraph.GraphSearch
       MutGraph.Impl.Dijkstra
       MutGraph.Impl.DijkstraStandalone
-      MutGraph.Impl.DFS
+      MutGraph.Impl.GraphSearch
       MutGraph.Impl.ParseGraph
       MutContainers.Run
       MutContainers.Curry

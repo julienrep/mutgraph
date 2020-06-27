@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module MutContainers.Bi.Container (
         MakeNew(..),
 

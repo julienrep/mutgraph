@@ -23,7 +23,7 @@ type Labels = VectorU
 type Queue = Heap VectorU
 
 type GenInputs g k h e l z = (g, k)
-type GenOutputs l e = (l e)
+type GenOutputs labels e = (labels e)
 type InputsM m s g k e = (
         Mut s Scanned Bool,
         Mut s Labels e,
@@ -33,14 +33,14 @@ type InputsM m s g k e = (
     )
 type OutputsM m s g e = (Mut s Labels e, Cst s g)
 type GenInputsM s m g k h e l z = (Cst s g, k)
-type GenOutputsM s m l e = (l e)
+type GenOutputsM s m labels e = (labels e)
 
 instance (
     GraphReqs g k h e l z,
     M.UThawM g,
-    DijkstraSimpleM g,
+    DijkstraSimpleM g labels,
     MutToCst g
-    ) => Dijkstra g where
+    ) => Dijkstra g labels where
     dijkstra _graph _source =
         runST $ runM formatInputsM runAlgoM formatOutputsM
             (_graph, _source)
@@ -49,9 +49,9 @@ instance (
             formatInputsM (graph, source) = do
                 mgraph <- M.uthawM graph
                 return (cst mgraph, source)
-            runAlgoM :: (MutMonad s m) => GenInputsM s m g k h e l z -> m (GenOutputsM s m l e)
+            runAlgoM :: (MutMonad s m) => GenInputsM s m g k h e l z -> m (GenOutputsM s m labels e)
             runAlgoM = uncurryN dijkstraSimpleM
-            formatOutputsM :: (MutMonad s m) => GenOutputsM s m l e -> m (GenOutputs l e)
+            formatOutputsM :: (MutMonad s m) => GenOutputsM s m labels e -> m (GenOutputs labels e)
             formatOutputsM = return
     {-# INLINE dijkstra #-}
 
@@ -67,9 +67,8 @@ instance (
     KeyOf labels ~ k,
     KeyOf scanned ~ k,
     UFreezeC Labels e,
-    M.Convert (Labels e) (l e),
     DijkstraM g q scanned labels
-    ) => DijkstraSimpleM g where
+    ) => DijkstraSimpleM g labels where
     dijkstraSimpleM _graph _source =
         runM formatInputsM runAlgoM formatOutputsM 
             (_graph, _source)
@@ -88,6 +87,6 @@ instance (
                 let (_, labels, _, mgraph, _) = inputs
                 uncurryN dijkstraM inputs
                 return (labels, mgraph)
-            formatOutputsM :: (MutMonad s m) => OutputsM m s g e -> m (GenOutputsM s m l e)
-            formatOutputsM (labels, _) = M.convert <$> ufreezeC labels
+            formatOutputsM :: (MutMonad s m) => OutputsM m s g e -> m (GenOutputsM s m labels e)
+            formatOutputsM (labels, _) = ufreezeC labels
     {-# INLINE dijkstraSimpleM #-}

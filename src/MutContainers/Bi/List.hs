@@ -4,6 +4,8 @@ module MutContainers.Bi.List (
         EnumFromTo(..),
         Concat(..),
         Replicate(..),
+        ToList(..),
+        FromList(..),
 
         ReplicateM(..), ReplicateMM(..),
         PushFrontM(..), PushFrontMM(..), PushFrontMC(..), 
@@ -12,7 +14,7 @@ module MutContainers.Bi.List (
         PopBackM(..),
     )
 where
-import Prelude hiding (length, zip, map, enumFromTo)
+import qualified Prelude
 import MutContainers.Bi.Size
 import MutState.State
 
@@ -26,6 +28,9 @@ class Concat (l :: * -> *) a where concat :: l a -> l a -> l a
 
 class Replicate (l :: * -> *) a where replicate :: SizeOf l -> a -> l a
 
+class ToList (l :: * -> *) a where toList :: l a -> [a]
+
+class FromList (l :: * -> *) a where fromList :: [a] -> l a
 
 class ReplicateM (l :: * -> *) a where replicateM :: (MutMonad s m) => SizeOf l -> m a -> m (Mut s l a)
 class ReplicateMM (l :: * -> *) a where replicateMM :: (MutMonad s m) => SizeOf l -> m (Mut s a) -> m (Mut s l (Mut s a))
@@ -42,3 +47,7 @@ class PushBackM (l :: * -> *) a where pushBackM :: (MutMonad s m) => Mut s l a -
 class PopFrontM (l :: * -> *) a where popFrontM :: (MutMonad s m) => Mut s l a -> m a
 
 class PopBackM (l :: * -> *) a where popBackM :: (MutMonad s m) => Mut s l a -> m a
+
+-- Prelude instances
+instance Zip [] a b where zip = Prelude.zip
+instance Map [] a b where map = Prelude.map
