@@ -16,9 +16,7 @@ import MutState.State
 import MutGraph.Graph
 import MutGraph.AdjacencyList
 import MutGraph.Dijkstra
-import MutGraph.Impl.Dijkstra()
-import MutGraph.Impl.DijkstraStandalone()
-import MutGraph.Impl.ParseGraph()
+import MutGraph.Parser
 import MutContainers.Curry
 import MutContainers.Run
 import MutContainers.Vector
@@ -64,17 +62,15 @@ dijkstraFormatOutputsM = return . map (\x -> if x < maxBound then x else 0) . to
 testDijkstraFromFile :: Test
 testDijkstraFromFile = TestCase $ do
     dputs lr
-    x <- try (parseEdgesFromFileM "../dijkstra2.txt")
-    r <- case x of
-        Left (ex :: SomeException) -> do
-            _ <- error (show ex)
-            return ([],  0, 0)
-        Right r -> return r
-    dputs $ "File parsed!" ++ lr
-    let (input :: [] (Int, Int, Int), _ :: Int, _ :: Int) = r
-    let source = 1
-    _ <- runM dijkstraFormatInputsM dijkstraRunM dijkstraFormatOutputsM (input, source)
-    return ()
+    x <- parseEdgesFromFileM (SimpleParser "../dijkstra2.txt")
+    case x of
+        Nothing -> dputs $ "File could not be parsed!" ++ lr
+        Just r -> do
+            dputs $ "File parsed!" ++ lr
+            let (input :: [] (Int, Int, Int), _ :: Int, _ :: Int) = r
+            let source = 1
+            _ <- runM dijkstraFormatInputsM dijkstraRunM dijkstraFormatOutputsM (input, source)
+            return ()
 
 testDijkstraFromList :: Test
 testDijkstraFromList = TestCase $ do

@@ -25,10 +25,7 @@ library
       MutGraph.AdjacencyList
       MutGraph.Dijkstra
       MutGraph.GraphSearch
-      MutGraph.Impl.Dijkstra
-      MutGraph.Impl.DijkstraStandalone
-      MutGraph.Impl.GraphSearch
-      MutGraph.Impl.ParseGraph
+      MutGraph.Parser
       MutContainers.Run
       MutContainers.Curry
       MutContainers.Vector
@@ -42,6 +39,7 @@ library
       MutContainers.Mono.Container
       MutContainers.Mono.Size
       MutContainers.Mono.List
+      MutContainers.Mono.Map
       MutState.State
       Tests
       Tests.MutGraph.Dijkstra

@@ -3,29 +3,28 @@ module MutGraph.Graph (
     VertexKeyOf, EdgeKeyOf, EdgeValueOf, GraphListOf, GraphSizeOf,
     GraphReqs,
 
-    GetGraphNodeCount, getGraphNodeCount,
-    ReadGraphEdge, readGraphEdge,
-    ListGraphNodes, listGraphNodes,
-    ListGraphEdgesFrom, listGraphEdgesFrom,
-    ListGraphEdges, listGraphEdges,
-    MakeGraphFromEdges, makeGraphFromEdges,
+    GetGraphNodeCount(..),
+    ReadGraphEdge(..),
+    ListGraphNodes(..),
+    ListGraphEdgesFrom(..),
+    ListGraphEdges(..),
+    MakeGraphFromEdges(..),
 
-    GetGraphNodeCountC, getGraphNodeCountC,
-    ReadGraphEdgeC, readGraphEdgeC,
-    WriteGraphEdgeM, writeGraphEdgeM, modGraphEdgeM,
-    ListGraphNodesC, listGraphNodesC,
-    ListGraphEdgesFromC,  listGraphEdgesFromC,
+    GetGraphNodeCountC(..),
+    ReadGraphEdgeC(..),
+    WriteGraphEdgeM(..), modGraphEdgeM,
+    ListGraphNodesC(..),
+    ListGraphEdgesFromC(..),
     ListGraphEdgesC(..),
+    AddGraphEdgeM(..),
+    MakeEmptyGraphM(..),
+    MakeGraphFromEdgesM(..),
+    ParseEdgesFromFileM(..),
 
-    AddGraphEdgeM, addGraphEdgeM,
-    MakeEmptyGraphM, makeEmptyGraphM,
-    MakeGraphFromEdgesM, makeGraphFromEdgesM,
-    ParseEdgesFromFileM, parseEdgesFromFileM,
-
-    GetEdgeTail, getEdgeTail,
-    GetEdgeHead, getEdgeHead,
-    GetEdgeData, getEdgeData,
-    GetEdgeKey, getEdgeKey,
+    GetEdgeTail(..),
+    GetEdgeHead(..),
+    GetEdgeData(..),
+    GetEdgeKey(..),
     Edge(..),
 
     fmapGraph,
@@ -67,7 +66,8 @@ class ListGraphEdges g where
         (GraphReqs g k h e l z) => g -> l (Edge g)
     listGraphEdges g = listGraphNodes g >>= listGraphEdgesFrom g
 class MakeGraphFromEdges g list where
-    makeGraphFromEdges :: (GraphReqs g k h e l z, Foldable list) => list (k, k, e) -> g
+    makeGraphFromEdges :: (GraphReqs g k h e l z, Foldable list) =>
+        list (k, k, e) -> g
 
 -- mutable graph
 class GetGraphNodeCountC g where
@@ -79,9 +79,11 @@ class ReadGraphEdgeC g where
 class WriteGraphEdgeM g where
     writeGraphEdgeM :: (MutMonad s m, GraphReqs g k h e l z) =>
         Mut s g -> h -> e -> m ()
-modGraphEdgeM :: (MutMonad s m, ReadGraphEdgeC g, WriteGraphEdgeM g, GetEdgeData (Edge g), MutToCst g)
-    => Mut s g -> (EdgeValueOf (Edge g) -> EdgeValueOf (Edge g)) -> EdgeKeyOf g -> m ()
-modGraphEdgeM g a h = readGraphEdgeC (cst g) h >>= \edge -> writeGraphEdgeM g h (a (getEdgeData edge))
+modGraphEdgeM :: (MutMonad s m, ReadGraphEdgeC g, WriteGraphEdgeM g,
+    GetEdgeData (Edge g), MutToCst g) => Mut s g -> 
+        (EdgeValueOf (Edge g) -> EdgeValueOf (Edge g)) -> EdgeKeyOf g -> m ()
+modGraphEdgeM g a h = readGraphEdgeC (cst g) h >>= 
+    \edge -> writeGraphEdgeM g h (a (getEdgeData edge))
 class ListGraphNodesC g where
     listGraphNodesC :: (MutMonad s m, GraphReqs g k h e l z) =>
         Cst s g -> m (l k)
@@ -91,9 +93,11 @@ class ListGraphEdgesFromC g where
 class ListGraphEdgesC g where
     listGraphEdgesC :: 
         (MutMonad s m, GraphReqs g k h e l z) => Cst s g -> m (l (Edge g))
-    default listGraphEdgesC :: (Traversable l, Monad l, ListGraphNodesC g, ListGraphEdgesFromC g) =>
+    default listGraphEdgesC :: (Traversable l, Monad l, ListGraphNodesC g, 
+        ListGraphEdgesFromC g) =>
         (MutMonad s m, GraphReqs g k h e l z) => Cst s g -> m (l (Edge g))
-    listGraphEdgesC g = join <$> (listGraphNodesC g >>= mapM (listGraphEdgesFromC g))
+    listGraphEdgesC g = 
+        join <$> (listGraphNodesC g >>= mapM (listGraphEdgesFromC g))
 class AddGraphEdgeM g where
     addGraphEdgeM :: (MutMonad s m, GraphReqs g k h e l z) =>
         Mut s g -> (k, k, e) -> m h
@@ -112,8 +116,9 @@ class MakeGraphFromEdgesM g list where
         mapM_ (addGraphEdgeM graph) edges
         return graph
     {-# INLINE makeGraphFromEdgesM #-}
-class ParseEdgesFromFileM list e k z where
-    parseEdgesFromFileM :: (MutMonad s m, m ~ IO) => String -> m (list (k, k, e), z, z)
+class ParseEdgesFromFileM parser list e k z where
+    parseEdgesFromFileM :: (MutMonad s m, m ~ IO) =>
+        parser -> m (Maybe (list (k, k, e), z, z))
 
 
 -- edge
@@ -127,7 +132,8 @@ instance (GraphReqs g k h e l z, NFData (k, k, e, h)) => NFData (Edge g) where
     rnf (Edge (u, v, e, h)) = rnf (u, v, e, h)
     {-# INLINE rnf #-}
 derivingUnbox "Edge"
-    [t| forall g. (Unbox (VertexKeyOf g), Unbox (EdgeKeyOf g), Unbox (EdgeValueOf g)) => 
+    [t| forall g. (Unbox (VertexKeyOf g), Unbox (EdgeKeyOf g), 
+        Unbox (EdgeValueOf g)) => 
         Edge g -> (VertexKeyOf g, VertexKeyOf g, EdgeValueOf g, EdgeKeyOf g) |]
     [| \ (Edge edge) -> edge |]
     [| Edge |]
@@ -167,26 +173,25 @@ instance (GetGraphNodeCount g) => GetGraphNodeCount (GraphMap g e x) where
     {-# INLINE getGraphNodeCount #-}
 instance (ReadGraphEdge g, e ~ EdgeValueOf g) =>
     ReadGraphEdge (GraphMap g e x) where
-    readGraphEdge (GraphMap (graph, f)) _h = 
-        let Edge (u, v, e, h) = readGraphEdge graph _h
-        in Edge (u, v, f e, h)
+    readGraphEdge (GraphMap (graph, f)) _h = Edge (u, v, f e, h)
+        where Edge (u, v, e, h) = readGraphEdge graph _h
     {-# INLINE readGraphEdge #-}
 instance (ListGraphNodes g) => ListGraphNodes (GraphMap g e x) where
     listGraphNodes (GraphMap (graph, _)) = listGraphNodes graph
     {-# INLINE listGraphNodes #-}
 instance (GraphReqs g k h e l z, Functor l, ListGraphEdgesFrom g) =>
     ListGraphEdgesFrom (GraphMap g e x) where
-    listGraphEdgesFrom (GraphMap (graph, f)) _u = 
-        let l = listGraphEdgesFrom graph _u
-        in fmap g l
-        where g (Edge (u, v, e, h)) = Edge (u, v, f e, h)
+    listGraphEdgesFrom (GraphMap (graph, f)) _u = fmap g l
+        where
+        l = listGraphEdgesFrom graph _u
+        g (Edge (u, v, e, h)) = Edge (u, v, f e, h)
     {-# INLINE listGraphEdgesFrom #-}
 instance (GraphReqs g k h e l z, Functor l, ListGraphEdges g) =>
     ListGraphEdges (GraphMap g e x) where
-    listGraphEdges (GraphMap (graph, f)) = 
-        let l = listGraphEdges graph
-        in fmap g l
-        where g (Edge (u, v, e, h)) = Edge (u, v, f e, h)
+    listGraphEdges (GraphMap (graph, f)) = fmap g l
+        where
+        l = listGraphEdges graph
+        g (Edge (u, v, e, h)) = Edge (u, v, f e, h)
     {-# INLINE listGraphEdges #-}
 
 instance (GetGraphNodeCountC g) => GetGraphNodeCountC (GraphMap g e x) where
@@ -209,7 +214,6 @@ instance (GraphReqs g k h e l z, Functor l, ListGraphEdgesFromC g) =>
     {-# INLINE listGraphEdgesFromC #-}
 instance (GraphReqs g k h e l z, Functor l, ListGraphEdgesC g) =>
     ListGraphEdgesC (GraphMap g e x) where
-    listGraphEdgesC (GraphMap (graph, f)) = 
-        fmap g <$> listGraphEdgesC graph
+    listGraphEdgesC (GraphMap (graph, f)) = fmap g <$> listGraphEdgesC graph
         where g (Edge (u, v, e, h)) = Edge (u, v, f e, h)
     {-# INLINE listGraphEdgesC #-}
