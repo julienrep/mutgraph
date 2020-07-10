@@ -25,13 +25,14 @@ import qualified Data.Vector.Mutable           as VMI
 import qualified Data.Vector.Unboxed.Mutable   as VMU
 import qualified Data.Vector.Storable.Mutable  as VMS
 
-newtype Vec v k a = Vec (v a)
-newtype MVec v s k a = MVec (v s a)
+newtype Vec (v :: * -> *) (k :: *) (a :: *) = Vec (v a)
+newtype MVec (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = MVec (mv s a)
 type instance Mut s (Vec v k) = MVec (V.Mutable v) s k
 type instance Cst s (Vec v k) = MVec (V.Mutable v) s k
 
-newtype DVec v k a = DVec (v a)
-newtype MDVec v s k a = MDVec (MutVar s (v s a))
+newtype DVec (v :: * -> *) (k :: *) (a :: *) = DVec (v a)
+newtype MDVec (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = 
+    MDVec (MutVar s (mv s a))
 type instance Mut s (DVec v k) = MDVec (V.Mutable v) s k
 type instance Cst s (DVec v k) = MDVec (V.Mutable v) s k
 
