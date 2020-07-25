@@ -23,6 +23,7 @@ import qualified MutContainers.Mono.Container as M
 import MutContainers.Run
 import MutContainers.Curry
 import MutContainers.Bi.Heap
+import MutContainers.Bi.Size
 
 class Dijkstra g labels where
     dijkstra :: (GraphReqs g k h e l z, k ~ KeyOf labels, Num e, Ord e) =>
@@ -174,6 +175,7 @@ instance (
 type Scanned = VectorU
 type Labels = VectorU
 type Queue = Heap VectorU Int
+type QueueVec = VectorU
 
 instance (
     GraphReqs g k h e l z,
@@ -183,11 +185,19 @@ instance (
     q ~ Queue,
     scanned ~ Scanned,
     labels ~ Labels,
+    qvec ~ QueueVec,
     z ~ k,
     k ~ KeyOf labels,
     k ~ KeyOf scanned,
+    k ~ SizeOf labels,
+    k ~ SizeOf scanned,
     UFreezeC labels e,
-    DijkstraM g q scanned labels
+    ReplicateM labels e,
+    ReplicateM scanned Bool,
+    ReplicateM qvec (e, k),
+    MakeHeapM qvec q (e, k) z,
+    DijkstraM g q scanned labels,
+    MutToCstC labels e
     ) => DijkstraSimpleM g labels where
     dijkstraSimpleM _graph _source =
         runM formatInputsM runAlgoM formatOutputsM 
@@ -198,9 +208,8 @@ instance (
                 m (InputsM m s g k e labels scanned q)
             formatInputsM (mgraph, source) = do
                 n <- getGraphNodeCountC mgraph
-                queue_vec  <- replicateM n $ return (0, 0)
-                queue_size <- newMutVar 0
-                let queue = Heap (MutSP queue_vec, queue_size)
+                queue_vec :: Mut s qvec (e, k) <- replicateM n $ return (0, 0)
+                queue <- makeHeapM queue_vec (0 :: z)
                 labels <- replicateM n $ return 0
                 scanned <- replicateM n $ return False
                 return (scanned, labels, queue, mgraph, source)
@@ -213,5 +222,5 @@ instance (
                 return (labels, mgraph)
             formatOutputsM :: (MutMonad s m) =>
                 OutputsM m s g e labels -> m (GenOutputsM s m labels e)
-            formatOutputsM (labels, _) = ufreezeC labels
+            formatOutputsM (labels, _) = ufreezeC (cstC labels)
     {-# INLINE dijkstraSimpleM #-}

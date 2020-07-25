@@ -13,7 +13,8 @@ module MutState.State (
     MutToCstC, cstC, cstCM, cstCC,
     MutV(..),
     MutSP(..), MutSS(..),
-    module Data.Primitive.MutVar,
+    -- module Data.Primitive.MutVar,
+    readMutV, writeMutV, modifyMutV, newMutV,
     )
 where
 import Control.DeepSeq
@@ -71,3 +72,17 @@ type instance Mut s (MutSP l a) = MutSP (Mut s l) a
 type instance Mut s (MutSS l a) = MutSS (Mut s l) (Mut s a)
 type instance Cst s (MutSP l a) = MutSP (Cst s l) a
 type instance Cst s (MutSS l a) = MutSS (Cst s l) (Cst s a)
+
+
+newMutV :: (MutMonad s m) => a -> m (Mut s (MutV a))
+newMutV = newMutVar
+{-# INLINE newMutV #-}
+readMutV :: (MutMonad s m) => Mut s (MutV a) -> m a
+readMutV = readMutVar
+{-# INLINE readMutV #-}
+writeMutV :: (MutMonad s m) => Mut s (MutV a) -> a -> m ()
+writeMutV = writeMutVar
+{-# INLINE writeMutV #-}
+modifyMutV :: (MutMonad s m) => Mut s (MutV a) -> (a -> a) -> m ()
+modifyMutV = modifyMutVar
+{-# INLINE modifyMutV #-}

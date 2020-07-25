@@ -1,5 +1,5 @@
 module MutContainers.Bi.Heap (
-    Heap(..),
+    Heap, MakeHeapM(..),
 )
 where
 import Prelude (Bounded(..), Num(..), Ord(..), Integral(..), Eq(..), ($), (<$>), const)
@@ -18,19 +18,23 @@ type HeapReqs v k z a = (
     Num k, Ord k, Integral k
     )
 
-newtype Heap v z a = Heap (v a, z)
-type instance Mut s (Heap v z) = Heap (MutSP (Mut s v)) (MutVar s z)
-type instance Cst s (Heap v z) = Heap (MutSP (Cst s v)) (MutVar s z)
+newtype Heap (v :: * -> *) (z :: *) (a :: *) = Heap (v a, z)
+type instance Mut s (Heap v z) = Heap (MutSP (Mut s v)) (Mut s (MutV z))
+type instance Cst s (Heap v z) = Heap (MutSP (Cst s v)) (Mut s (MutV z))
 
+class MakeHeapM (v :: * -> *) (h :: * -> *) (a :: *) (z :: *) where
+    makeHeapM :: (MutMonad s m) => Mut s v a -> z -> m (Mut s h a)
+instance MakeHeapM v (Heap v z) a z where
+    makeHeapM v z = newMutV z >>= \zVar -> return (Heap (MutSP v, zVar))
 
-type instance SizeOf (Heap v z) = KeyOf v 
+type instance SizeOf (Heap v z) = z
 type instance KeyOf (Heap v z) = KeyOf v
 
 instance (HeapReqs v k z a) => GetSizeC (Heap v z) a where
-    getSizeC (Heap (_, z)) = readMutVar z
+    getSizeC (Heap (_, z)) = readMutV z
     {-# INLINE getSizeC #-}
 instance (HeapReqs v k z a) => ModifySizeM (Heap v z) a where
-    modifySizeM (Heap (_, z)) = modifyMutVar z
+    modifySizeM (Heap (_, z)) = modifyMutV z
     {-# INLINE modifySizeM #-}
 
 instance (HeapReqs v k z a) => WriteM (Heap v z) a where
