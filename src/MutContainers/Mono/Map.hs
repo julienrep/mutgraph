@@ -10,21 +10,22 @@ import Prelude ((<$>))
 import Control.Monad (Monad(..))
 import MutState.State
 
-type family KeyOf (l :: *) :: *
-type family ValOf (l :: *) :: *
+type family KeyOf (h :: *) :: *
+type family ValOf (h :: *) :: *
+type instance ValOf [a] = a
 
-class WriteM l where
-    writeM :: (MutMonad s m, k ~ KeyOf l, a ~ ValOf l) =>
-        Mut s l -> k -> a -> m ()
+class WriteM h where
+    writeM :: (MutMonad s m, k ~ KeyOf h, a ~ ValOf h) =>
+        Mut s h -> k -> a -> m ()
 
-class ReadC l where
-    readC :: (MutMonad s m, k ~ KeyOf l, a ~ ValOf l) =>
-        Cst s l -> k -> m a
+class ReadC h where
+    readC :: (MutMonad s m, k ~ KeyOf h, a ~ ValOf h) =>
+        Cst s h -> k -> m a
 
-modifyM :: (MutMonad s m, k ~ KeyOf l, a ~ ValOf l, 
-    ReadC l, WriteM l, MutToCst l) =>
-    Mut s l -> k -> (a -> a) -> m ()
-modifyM l k f = (f <$> readC (cst l) k) >>= writeM l k
+modifyM :: (MutMonad s m, k ~ KeyOf h, a ~ ValOf h, 
+    ReadC h, WriteM h, MutToCst h) =>
+    Mut s h -> k -> (a -> a) -> m ()
+modifyM h k f = (f <$> readC (cst h) k) >>= writeM h k
 {-# INLINE modifyM #-}
 
-class ReadAt l a where at :: (k ~ KeyOf l, a ~ ValOf l) => l -> k -> a 
+class ReadAt h a where at :: (k ~ KeyOf h, a ~ ValOf h) => h -> k -> a 

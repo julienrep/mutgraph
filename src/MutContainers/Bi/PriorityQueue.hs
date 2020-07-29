@@ -7,7 +7,7 @@ import Prelude
 import MutState.State
 
 class ExtractMinM (q :: * -> *) a where
-    extractMinM :: (MutMonad s m, Ord a) => Mut s q a -> m a 
+    extractMinM :: (MutMonad s m, Ord a) => Mut2 s q a -> m a 
 
 -- extractMinPreM queue = do
 --     e <- isEmptyC queue
@@ -15,4 +15,4 @@ class ExtractMinM (q :: * -> *) a where
 --     $ return True
 
 class InsertValM (q :: * -> *) a where
-    insertValM :: (MutMonad s m, Ord a) => Mut s q a -> a -> m ()
+    insertValM :: (MutMonad s m, Ord a) => Mut2 s q a -> a -> m ()

@@ -27,13 +27,13 @@ class DfsM g colors where
         (k -> m ()) -> (k -> m ())
         -> (Edge g -> m ()) -> (Edge g -> m ())
         -> (Edge g -> m ()) -> (Edge g -> m ())
-        -> Mut s colors VisitStatus -> Mut s g -> k -> m ()
+        -> Mut2 s colors VisitStatus -> Mut s g -> k -> m ()
 
 class BfsM g colors q where
     bfsM :: (MutMonad s m, GraphReqs g k h e l z, k ~ KeyOf colors) =>
         (k -> m ()) -> (k -> m ())
         -> (Edge g -> m ()) -> (Edge g -> m ())
-        -> Mut s q k -> Mut s colors VisitStatus -> Mut s g -> k -> m ()
+        -> Mut2 s q k -> Mut2 s colors VisitStatus -> Mut s g -> k -> m ()
 
 instance (
         GraphReqs g k h e l z,
@@ -42,7 +42,7 @@ instance (
         ReplicateM colors VisitStatus,
         WriteM colors VisitStatus,
         ReadC colors VisitStatus,
-        MutToCstC colors VisitStatus,
+        MutToCst2 colors VisitStatus,
         Foldable l,
         ListGraphNodesC g,
         ListGraphEdgesFromC g,
@@ -57,7 +57,7 @@ instance (
                 listGraphEdgesFromC (cst graph) u >>=
                     mapM_  (\edge -> do
                     let v = getEdgeHead edge
-                    status <- readC (cstC colors) v
+                    status <- readC (c2 colors) v
                     case status of
                         Unvisited -> do
                             preEdge edge
@@ -77,12 +77,12 @@ instance (
         WriteM colors VisitStatus,
         ReadC colors VisitStatus,
         ReplicateM colors VisitStatus,
-        MutToCstC colors VisitStatus,
+        MutToCst2 colors VisitStatus,
         EmptyM q k,
         IsEmptyC q k,
         PushBackM q k,
         PopFrontM q k,
-        MutToCstC q k,
+        MutToCst2 q k,
         Foldable l,
         ListGraphNodesC g,
         ListGraphEdgesFromC g,
@@ -95,14 +95,14 @@ instance (
         writeM colors _u Visiting
         loop where
             loop = do
-                empty <- isEmptyC (cstC queue)
+                empty <- isEmptyC (c2 queue)
                 unless empty $ do
                     u <- popFrontM queue
                     preNode u
                     listGraphEdgesFromC (cst graph) u >>=
                         mapM_ (\edge -> do
                             let v = getEdgeHead edge
-                            status <- readC (cstC colors) v
+                            status <- readC (c2 colors) v
                             case status of
                                 Unvisited -> do
                                     ascEdge edge

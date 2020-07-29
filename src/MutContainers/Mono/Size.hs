@@ -4,7 +4,7 @@ module MutContainers.Mono.Size (
     GetSizeC(..),
     GrowSizeM(..),
     ShrinkSizeM(..),
-    ModSizeM(..),
+    ModifySizeM(..),
     SetSizeM(..),
     EnsureSizeM(..),
 ) where
@@ -21,34 +21,34 @@ class GetSizeC x where
 class GrowSizeM x where
     growSizeM :: 
         (MutMonad s m, z ~ SizeOf x, Monad m) => Mut s x -> z -> m ()
-    default growSizeM :: (ModSizeM x, Num z) =>
+    default growSizeM :: (ModifySizeM x, Num z) =>
         (MutMonad s m, z ~ SizeOf x, Monad m) => Mut s x -> z -> m ()
-    growSizeM x z = modSizeM x (+z)
+    growSizeM x z = modifySizeM x (+z)
     {-# INLINE growSizeM #-}
 class ShrinkSizeM x where
     shrinkSizeM ::
         (MutMonad s m, z ~ SizeOf x, Monad m) => Mut s x -> z -> m ()
-    default shrinkSizeM :: (ModSizeM x, Num z) =>
+    default shrinkSizeM :: (ModifySizeM x, Num z) =>
         (MutMonad s m, z ~ SizeOf x, Monad m) => Mut s x -> z -> m ()
-    shrinkSizeM x z = modSizeM x (+(-z))
+    shrinkSizeM x z = modifySizeM x (+(-z))
     {-# INLINE shrinkSizeM #-}
-class ModSizeM x where
-    modSizeM ::
+class ModifySizeM x where
+    modifySizeM ::
         (MutMonad s m, z ~ SizeOf x, Monad m) => Mut s x -> (z -> z) -> m ()
-    default modSizeM :: (GetSizeC x, GrowSizeM x, ShrinkSizeM x, Num z, Ord z, MutToCst x) => 
+    default modifySizeM :: (GetSizeC x, GrowSizeM x, ShrinkSizeM x, Num z, Ord z, MutToCst x) => 
         (MutMonad s m, z ~ SizeOf x, Monad m) => Mut s x -> (z -> z) -> m ()
-    modSizeM x f = do
+    modifySizeM x f = do
         size <- getSizeC (cst x)
         let diff = (f size) - size
         if diff > 0 then growSizeM x diff
         else when (diff < 0) $ shrinkSizeM x diff
-    {-# INLINE modSizeM #-}
+    {-# INLINE modifySizeM #-}
 class SetSizeM x where
     setSizeM ::
         (MutMonad s m, z ~ SizeOf x, Monad m) => Mut s x -> z -> m ()
-    default setSizeM :: (ModSizeM x) => 
+    default setSizeM :: (ModifySizeM x) => 
         (MutMonad s m, z ~ SizeOf x, Monad m) => Mut s x -> z -> m ()
-    setSizeM x z = modSizeM x (const z)
+    setSizeM x z = modifySizeM x (const z)
     {-# INLINE setSizeM #-}
 class EnsureSizeM x where
     ensureSizeM ::

@@ -30,6 +30,8 @@ library
       MutContainers.Curry
       MutContainers.Vector
       MutContainers.Unbox
+      MutContainers.Tri.Map
+      MutContainers.Tri.Heap
       MutContainers.Bi.Container
       MutContainers.Bi.Size
       MutContainers.Bi.List
@@ -40,6 +42,8 @@ library
       MutContainers.Mono.Size
       MutContainers.Mono.List
       MutContainers.Mono.Map
+      MutContainers.Mono.PriorityQueue
+      MutContainers.Mono.Heap
       MutState.State
       Tests
       Tests.MutGraph.Dijkstra

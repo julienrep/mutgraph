@@ -1,9 +1,14 @@
 module MutContainers.Mono.Container (
     MakeNew(..),
-    Convert(..), ConvertM(..), UConvertM(..),
-    FreezeC(..), UFreezeC(..),
-    ThawM(..), UThawM(..),
-    IsEmptyC(..), EmptyM(..),
+    Convert(..),
+    ConvertM(..),
+    UConvertM(..),
+    FreezeC(..),
+    UFreezeC(..),
+    ThawM(..),
+    UThawM(..),
+    IsEmptyC(..),
+    EmptyM(..),
     MakeNewM(..),
 ) where
 import Prelude
@@ -11,9 +16,9 @@ import MutState.State
 
 class MakeNew l where
     makeNew :: l
-
 class Convert p q where
     convert :: p -> q
+
 class ConvertM p q where
     convertM :: (MutMonad s m) => Mut s p -> m (Mut s q)
 class UConvertM p q where

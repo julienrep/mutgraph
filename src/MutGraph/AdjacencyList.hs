@@ -31,9 +31,9 @@ instance (NFData (w (v (k, e)))) => NFData (AdjList l i w v k e) where
   {-# INLINE rnf #-}
 
 type instance Mut s (AdjList l i w v k e) = 
-    AdjList l i (MutSS (Mut s w)) (MutSP (Mut s v)) k e
+    AdjList l i (MutSS (Mut2 s w)) (MutSP (Mut2 s v)) k e
 type instance Cst s (AdjList l i w v k e) = 
-    AdjList l i (MutSS (Cst s w)) (MutSP (Cst s v)) k e
+    AdjList l i (MutSS (Cst2 s w)) (MutSP (Cst2 s v)) k e
 
 type AdjListReqs g k h e l z i w v = (
     g ~ AdjList l i w v k e,
@@ -134,10 +134,10 @@ instance (MutAdjListReqs g k h e l z i w v) =>
     {-# INLINE readGraphEdgeC #-}
 
 instance (MutAdjListReqs g k h e l z i w v, 
-    MutToCstC w (MutSP v (k, e)),
-    MutToCstC v (k, e)) =>
+    MutToCst2 w (MutSP v (k, e)),
+    MutToCst2 v (k, e)) =>
     WriteGraphEdgeM (AdjList l i w v k e) where
-    writeGraphEdgeM (AdjList (MutSS w)) (u, i) e = readCM (cstCM w) u >>= 
+    writeGraphEdgeM (AdjList (MutSS w)) (u, i) e = readCM (c2M w) u >>= 
         \(MutSP v) -> modifyM v i (\(k, _) -> (k, e))
     {-# INLINE writeGraphEdgeM #-}
 
@@ -178,15 +178,15 @@ instance (MutAdjListReqs g k h e l z i w v, Traversable l, Monad l) =>
 
 instance (MutAdjListReqs g k h e l z i w v, Ord k,
     M.EnsureSizeM (SizeViaNodes g),
-    MutToCstC w (MutSP v (k, e)),
-    MutToCstC v (k, e)
+    MutToCst2 w (MutSP v (k, e)),
+    MutToCst2 v (k, e)
     ) => AddGraphEdgeM (AdjList l i w v k e) where
     addGraphEdgeM graph (u, u', e) = do
         M.ensureSizeM (SizeViaNodes graph) (u' + 1)
         let (AdjList (MutSS w)) = graph
-        MutSP v <- readCM (cstCM w) u
-        h <- (u,) <$> getSizeC (cstC v)
-        fv <- ufreezeC (cstC v)
+        MutSP v <- readCM (c2M w) u
+        h <- (u,) <$> getSizeC (c2 v)
+        fv <- ufreezeC (c2 v)
         nv <- uthawM (concat fv (replicate 1 (u', e)))
         writeMM w u (MutSP nv)
         return h
@@ -228,7 +228,7 @@ instance (MutAdjListReqs g k h e l z i w v,
     SetSizeM w (v (k, e)),
     WriteM w (v (k, e)),
     Foldable l,
-    MutToCstC w (v (k, e))
+    MutToCst2 w (v (k, e))
     ) => M.UFreezeC (AdjList l i w v k e) where
     ufreezeC graph = do
             let (AdjList (MutSS mw)) = graph
@@ -239,7 +239,7 @@ instance (MutAdjListReqs g k h e l z i w v,
                     MutSP mv <- readCC mw u
                     ufreezeC mv >>= writeM x u
                     )
-            w <- ufreezeC (cstC x)
+            w <- ufreezeC (c2 x)
             return (AdjList w)
     {-# INLINE ufreezeC #-}
 
@@ -295,7 +295,7 @@ instance (MutAdjListReqs g k h e l z i w v) =>
 instance (MutAdjListReqs g k h e l z i w v, Ord k,
     Foldable l,
     MutToCst (SizeViaNodes g)
-    ) => M.ModSizeM (SizeViaNodes (AdjList l i w v k e))
+    ) => M.ModifySizeM (SizeViaNodes (AdjList l i w v k e))
 
 instance (MutAdjListReqs g k h e l z i w v, Ord k,
     Foldable l,
