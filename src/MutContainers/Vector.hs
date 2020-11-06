@@ -25,6 +25,7 @@ import qualified Data.Vector.Storable          as VS
 import qualified Data.Vector.Mutable           as VMI
 import qualified Data.Vector.Unboxed.Mutable   as VMU
 import qualified Data.Vector.Storable.Mutable  as VMS
+import MutContainers.Any.Map
 
 newtype Vec (v :: * -> *) (k :: *) (a :: *) = Vec (v a)
 newtype MVec (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = MVec (mv s a)
@@ -101,10 +102,10 @@ type instance SizeOf (Vec v k) = KeyOf (Vec v k)
 type instance SizeOf (DVec v k) = KeyOf (DVec v k)
 type instance M.SizeOf (Vec v k a) = KeyOf (Vec v k)
 type instance M.SizeOf (DVec v k a) = KeyOf (DVec v k)
-type instance M.ValOf (Vec v k a) = a
-type instance M.ValOf (DVec v k a) = a
-type instance M.KeyOf (Vec v k a) = KeyOf (Vec v k)
-type instance M.KeyOf (DVec v k a) = KeyOf (DVec v k)
+type instance ValOf (Vec v k a) = a
+type instance ValOf (DVec v k a) = a
+type instance KeyOf (Vec v k a) = KeyOf (Vec v k)
+type instance KeyOf (DVec v k a) = KeyOf (DVec v k)
 
 instance (mv ~ V.Mutable v, VM.MVector mv a) => WriteM (Vec v k) a where
     writeM (MVec mv) = VM.unsafeWrite mv

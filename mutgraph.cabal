@@ -31,6 +31,7 @@ library
       MutContainers.Curry
       MutContainers.Vector
       MutContainers.Unbox
+      MutContainers.Any.Map
       MutContainers.Tri.Map
       MutContainers.Tri.Heap
       MutContainers.Bi.Container

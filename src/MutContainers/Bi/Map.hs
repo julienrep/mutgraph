@@ -1,5 +1,4 @@
 module MutContainers.Bi.Map (
-        KeyOf,
         WriteM(..), WriteMM(..), WriteMC(..),
         ReadC(..), ReadCC(..), ReadCM(..),
         modifyM,
@@ -9,8 +8,8 @@ where
 import Prelude ((<$>))
 import Control.Monad (Monad(..))
 import MutState.State
+import MutContainers.Any.Map
 
-type family KeyOf (l :: * -> *) :: *
 
 class WriteM (l :: * -> *) a where
     writeM :: (MutMonad s m, k ~ KeyOf l) =>

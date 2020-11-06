@@ -16,7 +16,8 @@ module MutContainers.Mono.List (
 import qualified Prelude
 import MutContainers.Mono.Size
 import MutState.State
-import MutContainers.Mono.Map
+import MutContainers.Mono.Map ()
+import MutContainers.Any.Map
 
 class Zip p q r where
     zip :: (a ~ ValOf p, b ~ ValOf q, (a, b) ~ ValOf r) => p -> q -> r

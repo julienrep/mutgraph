@@ -5,7 +5,7 @@ module MutContainers.Mono.PriorityQueue (
 where
 import Prelude
 import MutState.State
-import MutContainers.Mono.Map
+import MutContainers.Any.Map
 
 class ExtractMinM q where
     extractMinM :: (MutMonad s m, a ~ ValOf q, Ord a) => Mut s q -> m a 
