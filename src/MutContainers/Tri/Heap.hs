@@ -62,14 +62,13 @@ instance (
     q ~ Heap h z,
     WriteM q a, ReadC q a,
     FixHeapProperty q k a,
-    MutToCst2 (q k) a,
-    MutToCst3 q k a
+    MutToCst (q k a)
     ) => InsertValM (Heap h z k) a where
     insertValM heap value = do
-        prevHeapSize <- getSizeC (c1m2 heap)
-        modifySizeM (m1m2 heap) (+1)
-        writeM (m3m2 heap) prevHeapSize value
-        fixHeapProperty (m3m2 heap) prevHeapSize
+        prevHeapSize <- getSizeC (cst heap)
+        modifySizeM heap (+1)
+        writeM heap prevHeapSize value
+        fixHeapProperty heap prevHeapSize
     {-# INLINE insertValM #-}
 
 instance (
@@ -78,13 +77,12 @@ instance (
     q ~ Heap h z,
     WriteM q a, ReadC q a,
     MinHeapify q k a,
-    MutToCst2 (q k) a,
-    MutToCst3 q k a
+    MutToCst (q k a)
     ) => ExtractMinM (Heap h z k) a where
     extractMinM heap = do
-        heapSize <- getSizeC (c1m2 heap)
-        rootValue <- readC (c3m2 heap) 0
-        readC (c3m2 heap) (heapSize - 1) >>= writeM heap 0
+        heapSize <- getSizeC (cst heap)
+        rootValue <- readC (cst heap) 0
+        readC (cst heap) (heapSize - 1) >>= writeM heap 0
         modifySizeM heap (+(-1))
         minHeapify heap 0
         return rootValue

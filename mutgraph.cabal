@@ -23,6 +23,7 @@ library
   exposed-modules:
       MutGraph.Graph
       MutGraph.AdjacencyList
+      MutGraph.AdjacencyList1
       MutGraph.Dijkstra
       MutGraph.GraphSearch
       MutGraph.Parser

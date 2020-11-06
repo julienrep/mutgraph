@@ -14,6 +14,7 @@ import MutContainers.Bi.Map
 import MutContainers.Bi.Size
 import MutContainers.Bi.List
 import qualified MutContainers.Mono.Container as M
+import qualified MutContainers.Mono.Map as M
 import qualified MutContainers.Mono.List as M
 import qualified MutContainers.Mono.Size as M
 import qualified Data.Vector.Generic           as V
@@ -100,6 +101,10 @@ type instance SizeOf (Vec v k) = KeyOf (Vec v k)
 type instance SizeOf (DVec v k) = KeyOf (DVec v k)
 type instance M.SizeOf (Vec v k a) = KeyOf (Vec v k)
 type instance M.SizeOf (DVec v k a) = KeyOf (DVec v k)
+type instance M.ValOf (Vec v k a) = a
+type instance M.ValOf (DVec v k a) = a
+type instance M.KeyOf (Vec v k a) = KeyOf (Vec v k)
+type instance M.KeyOf (DVec v k a) = KeyOf (DVec v k)
 
 instance (mv ~ V.Mutable v, VM.MVector mv a) => WriteM (Vec v k) a where
     writeM (MVec mv) = VM.unsafeWrite mv
@@ -232,6 +237,22 @@ instance (mv ~ V.Mutable v, VM.MVector mv a) => EnsureSizeM (DVec v k) a where
     {-# INLINE ensureSizeM #-}
  
 -- mono kinded imports
+instance (mv ~ V.Mutable v, VM.MVector mv a) => M.WriteM (Vec v k a) where
+    writeM (MVec mv) = VM.unsafeWrite mv
+    {-# INLINE writeM #-}
+-- instance (mv ~ V.Mutable v, VM.MVector mv a) => M.WriteMM (Vec v k a) where
+--     writeMM (MVec mv) = VM.unsafeWrite mv
+--     {-# INLINE writeMM #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => M.WriteM (DVec v k a) where
+    writeM (MDVec vl) k a = readMutV vl >>= \l -> VM.unsafeWrite l k a
+    {-# INLINE writeM #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => M.ReadC (Vec v k a) where
+    readC (MVec mv) = VM.unsafeRead mv
+    {-# INLINE readC #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => M.ReadC (DVec v k a) where
+    readC (MDVec vl) k = readMutV vl >>= \l -> VM.unsafeRead l k
+    {-# INLINE readC #-}
+
 instance (V.Vector v a) => M.Convert (Vec v k a) (v a) where
     convert (Vec v) = v
     {-# INLINE convert #-}
