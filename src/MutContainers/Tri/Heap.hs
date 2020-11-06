@@ -12,15 +12,15 @@ import MutContainers.Mono.Size
 import MutState.State
 
 newtype Heap (h :: * -> * -> *) (z :: *) (k :: *) (a :: *) = Heap (h k a, z)
-type instance Mut3 s (Heap h z) = Heap ( (Mut3 s h)) (Mut s (MutV z))
-type instance Cst3 s (Heap h z) = Heap ( (Cst3 s h)) (Cst s (MutV z))
-type instance Mut2 s (Heap h z k) = Heap ( (Mut3 s h)) (Mut s (MutV z)) k
-type instance Cst2 s (Heap h z k) = Heap ( (Cst3 s h)) (Cst s (MutV z)) k
-type instance Mut s (Heap h z k a) = Heap ( (Mut3 s h)) (Mut s (MutV z)) k a
-type instance Cst s (Heap h z k a) = Heap ( (Cst3 s h)) (Cst s (MutV z)) k a
+type instance Mut s (Heap h z) = Heap ( (Mut s h)) (Mut s (MutV z))
+type instance Cst s (Heap h z) = Heap ( (Cst s h)) (Cst s (MutV z))
+type instance Mut s (Heap h z k) = Heap ( (Mut s h)) (Mut s (MutV z)) k
+type instance Cst s (Heap h z k) = Heap ( (Cst s h)) (Cst s (MutV z)) k
+type instance Mut s (Heap h z k a) = Heap ( (Mut s h)) (Mut s (MutV z)) k a
+type instance Cst s (Heap h z k a) = Heap ( (Cst s h)) (Cst s (MutV z)) k a
 
 class MakeHeapM (h :: * -> * -> *) (q :: * -> * -> *) (z :: *) (k :: *) (a :: *) where
-    makeHeapM :: (MutMonad s m) => Mut3 s h k a -> z -> m (Mut3 s q k a)
+    makeHeapM :: (MutMonad s m) => Mut s h k a -> z -> m (Mut s q k a)
 instance MakeHeapM h (Heap h z) z k a where
     makeHeapM h z = newMutV z >>= \zVar -> return (Heap (h, zVar))
 
@@ -40,7 +40,7 @@ instance (ReadC h a) => ReadC (Heap h z) a where
     {-# INLINE readC #-}
 swapM :: forall h a k s m. (MutMonad s m, 
     ReadC h a, WriteM h a, MutToCst3 h k a) =>
-    Mut3 s h k a -> k -> k -> m ()
+    Mut s h k a -> k -> k -> m ()
 swapM h i j = do
                 x <- readC (c3 h) i
                 y <- readC (c3 h) j
@@ -100,7 +100,7 @@ rightKey i = 2 * i + 2
 
 class FixHeapProperty (q :: * -> * -> *) (k :: *) (a :: *) where
     fixHeapProperty :: (MutMonad s m, ReadC q a, WriteM q a) =>
-        Mut3 s q k a -> k -> m ()
+        Mut s q k a -> k -> m ()
 instance (
     Integral k,
     Ord a,
@@ -120,7 +120,7 @@ instance (
 
 class MinHeapify (q :: * -> * -> *) (k :: *) (a :: *) where
     minHeapify :: (MutMonad s m, ReadC q a, WriteM q a) => 
-        Mut3 s q k a -> k -> m ()
+        Mut s q k a -> k -> m ()
 instance (
     Bounded a, Ord a,
     Num k, Ord k,

@@ -31,9 +31,9 @@ instance (NFData (w (v (k, e)))) => NFData (AdjList l i w v k e) where
   {-# INLINE rnf #-}
 
 type instance Mut s (AdjList l i w v k e) = 
-    AdjList l i (MutSS (Mut2 s w)) (MutSP (Mut2 s v)) k e
+    AdjList l i (MutSS (Mut s w)) (MutSP (Mut s v)) k e
 type instance Cst s (AdjList l i w v k e) = 
-    AdjList l i (MutSS (Cst2 s w)) (MutSP (Cst2 s v)) k e
+    AdjList l i (MutSS (Cst s w)) (MutSP (Cst s v)) k e
 
 type AdjListReqs g k h e l z i w v = (
     g ~ AdjList l i w v k e,

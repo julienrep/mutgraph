@@ -28,16 +28,16 @@ import qualified Data.Vector.Storable.Mutable  as VMS
 
 newtype Vec (v :: * -> *) (k :: *) (a :: *) = Vec (v a)
 newtype MVec (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = MVec (mv s a)
-type instance Mut2 s (Vec v k) = MVec (V.Mutable v) s k
-type instance Cst2 s (Vec v k) = MVec (V.Mutable v) s k
+type instance Mut s (Vec v k) = MVec (V.Mutable v) s k
+type instance Cst s (Vec v k) = MVec (V.Mutable v) s k
 type instance Mut s (Vec v k a) = MVec (V.Mutable v) s k a
 type instance Cst s (Vec v k a) = MVec (V.Mutable v) s k a
 
 newtype DVec (v :: * -> *) (k :: *) (a :: *) = DVec (v a)
 newtype MDVec (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = 
     MDVec (Mut s (MutV (mv s a)))
-type instance Mut2 s (DVec v k) = MDVec (V.Mutable v) s k
-type instance Cst2 s (DVec v k) = MDVec (V.Mutable v) s k
+type instance Mut s (DVec v k) = MDVec (V.Mutable v) s k
+type instance Cst s (DVec v k) = MDVec (V.Mutable v) s k
 type instance Mut s (DVec v k a) = MDVec (V.Mutable v) s k a
 type instance Cst s (DVec v k a) = MDVec (V.Mutable v) s k a
 

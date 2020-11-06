@@ -11,9 +11,7 @@ module MutState.State (
     MutMonad,
     Mut, Cst,
     MutToCst, cst,
-    Mut2, Cst2,
     MutToCst2, c2, c2C, c2M, m1m2, c1c2, m2m1, c2c1, c1m2, c2m1,
-    Mut3, Cst3,
     MutToCst3, c3, m1m3, m2m3, m3m2, m3m1, c1c3, c2c3, c3c2, c3c1, c1m3, c2m3, c3m2, c3m1,
     MutV(..),
     MutSP(..), MutSS(..),
@@ -36,12 +34,8 @@ type instance Mut s (MutV x) = MutVar s x
 type instance Cst s (MutV x) = MutVar s x
 
 
-type family Mut s (x :: *) = (r :: *) | r -> x s
-type family Cst s (x :: *) = (r :: *) | r -> x s
-type family Mut2 s (x :: * -> *) = (r :: * -> *) | r -> x s
-type family Cst2 s (x :: * -> *) = (r :: * -> *) | r -> x s
-type family Mut3 s (x :: * -> * -> *) = (r :: * -> * -> *) | r -> x s
-type family Cst3 s (x :: * -> * -> *) = (r :: * -> * -> *) | r -> x s
+type family Mut s (x :: k) = (r :: k) | r -> x s
+type family Cst s (x :: k) = (r :: k) | r -> x s
 
 class MutToCst1Func s (a :: *) where cst :: Mut s a -> Cst s a
 instance (Coercible (Mut s a) (Cst s a)) => MutToCst1Func s a where
@@ -50,19 +44,19 @@ instance (Coercible (Mut s a) (Cst s a)) => MutToCst1Func s a where
 type MutToCst a = forall s. MutToCst1Func s a
 
 class MutToCstFunc2 s (l :: * -> *) (a :: *) where
-    c2 :: Mut2 s l a -> Cst2 s l a
-    c2M :: Mut2 s l (Mut s a) -> Cst2 s l (Mut s a)
-    c2C :: Mut2 s l (Cst s a) -> Cst2 s l (Cst s a)
-    m1m2 :: Mut2 s l a -> Mut s (l a)
-    c1c2 :: Cst2 s l a -> Cst s (l a)
-    m2m1 :: Mut s (l a) -> Mut2 s l a
-    c2c1 :: Cst s (l a) -> Cst2 s l a
-    c1m2 :: Mut2 s l a -> Cst s (l a)
-    c2m1 :: Mut s (l a) -> Cst2 s l a
+    c2 :: Mut s l a -> Cst s l a
+    c2M :: Mut s l (Mut s a) -> Cst s l (Mut s a)
+    c2C :: Mut s l (Cst s a) -> Cst s l (Cst s a)
+    m1m2 :: Mut s l a -> Mut s (l a)
+    c1c2 :: Cst s l a -> Cst s (l a)
+    m2m1 :: Mut s (l a) -> Mut s l a
+    c2c1 :: Cst s (l a) -> Cst s l a
+    c1m2 :: Mut s l a -> Cst s (l a)
+    c2m1 :: Mut s (l a) -> Cst s l a
 instance (
-    Coercible (Mut2 s l) (Cst2 s l),
-    Coercible (Mut2 s l a) (Mut s (l a)),
-    Coercible (Cst2 s l a) (Cst s (l a))
+    Coercible (Mut s l) (Cst s l),
+    Coercible (Mut s l a) (Mut s (l a)),
+    Coercible (Cst s l a) (Cst s (l a))
     ) => MutToCstFunc2 s l a where
     c2 = coerce
     {-# INLINE c2 #-}
@@ -85,25 +79,25 @@ instance (
 type MutToCst2 (l :: * -> *) a = forall s. MutToCstFunc2 s l a
 
 class MutToCstFunc3 s (h :: * -> * -> *) (k :: *) (a :: *) where
-    c3 :: Mut3 s h k a -> Cst3 s h k a
-    m1m3 :: Mut3 s h k a -> Mut s (h k a)
-    m2m3 :: Mut3 s h k a -> Mut2 s (h k) a
-    m3m2 :: Mut2 s (h k) a -> Mut3 s h k a
-    m3m1 :: Mut s (h k a) -> Mut3 s h k a
-    c1c3 :: Cst3 s h k a -> Cst s (h k a)
-    c2c3 :: Cst3 s h k a -> Cst2 s (h k) a
-    c3c2 :: Cst2 s (h k) a -> Cst3 s h k a
-    c3c1 :: Cst s (h k a) -> Cst3 s h k a
-    c1m3 :: Mut3 s h k a -> Cst s (h k a)
-    c2m3 :: Mut3 s h k a -> Cst2 s (h k) a
-    c3m2 :: Mut2 s (h k) a -> Cst3 s h k a
-    c3m1 :: Mut s (h k a) -> Cst3 s h k a
+    c3 :: Mut s h k a -> Cst s h k a
+    m1m3 :: Mut s h k a -> Mut s (h k a)
+    m2m3 :: Mut s h k a -> Mut s (h k) a
+    m3m2 :: Mut s (h k) a -> Mut s h k a
+    m3m1 :: Mut s (h k a) -> Mut s h k a
+    c1c3 :: Cst s h k a -> Cst s (h k a)
+    c2c3 :: Cst s h k a -> Cst s (h k) a
+    c3c2 :: Cst s (h k) a -> Cst s h k a
+    c3c1 :: Cst s (h k a) -> Cst s h k a
+    c1m3 :: Mut s h k a -> Cst s (h k a)
+    c2m3 :: Mut s h k a -> Cst s (h k) a
+    c3m2 :: Mut s (h k) a -> Cst s h k a
+    c3m1 :: Mut s (h k a) -> Cst s h k a
 instance (
-    Coercible (Mut3 s h) (Cst3 s h),
-    Coercible (Mut3 s h k a) (Mut s (h k a)),
-    Coercible (Mut3 s h k) (Mut2 s (h k)),
-    Coercible (Cst3 s h k a) (Cst s (h k a)),
-    Coercible (Cst3 s h k) (Cst2 s (h k))
+    Coercible (Mut s h) (Cst s h),
+    Coercible (Mut s h k a) (Mut s (h k a)),
+    Coercible (Mut s h k) (Mut s (h k)),
+    Coercible (Cst s h k a) (Cst s (h k a)),
+    Coercible (Cst s h k) (Cst s (h k))
     ) => MutToCstFunc3 s h k a where
     c3 = coerce
     {-# INLINE c3 #-}
@@ -143,12 +137,12 @@ instance (NFData (l a)) => NFData (MutSP l a) where
 instance (NFData (l a)) => NFData (MutSS l a) where
   rnf (MutSS l) = rnf l
   {-# INLINE rnf #-}
-type instance Mut s (MutSP l a) = MutSP (Mut2 s l) a
-type instance Mut s (MutSS l a) = MutSS (Mut2 s l) (Mut s a)
-type instance Cst s (MutSP l a) = MutSP (Cst2 s l) a
-type instance Cst s (MutSS l a) = MutSS (Cst2 s l) (Cst s a)
-type instance Mut2 s (MutSP l) = MutSP (Mut2 s l)
-type instance Cst2 s (MutSP l) = MutSP (Cst2 s l)
+type instance Mut s (MutSP l a) = MutSP (Mut s l) a
+type instance Mut s (MutSS l a) = MutSS (Mut s l) (Mut s a)
+type instance Cst s (MutSP l a) = MutSP (Cst s l) a
+type instance Cst s (MutSS l a) = MutSS (Cst s l) (Cst s a)
+type instance Mut s (MutSP l) = MutSP (Mut s l)
+type instance Cst s (MutSP l) = MutSP (Cst s l)
 
 
 newMutV :: (MutMonad s m) => a -> m (Mut s (MutV a))

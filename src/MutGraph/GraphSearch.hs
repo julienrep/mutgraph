@@ -27,13 +27,13 @@ class DfsM g colors where
         (k -> m ()) -> (k -> m ())
         -> (Edge g -> m ()) -> (Edge g -> m ())
         -> (Edge g -> m ()) -> (Edge g -> m ())
-        -> Mut2 s colors VisitStatus -> Mut s g -> k -> m ()
+        -> Mut s colors VisitStatus -> Mut s g -> k -> m ()
 
 class BfsM g colors q where
     bfsM :: (MutMonad s m, GraphReqs g k h e l z, k ~ KeyOf colors) =>
         (k -> m ()) -> (k -> m ())
         -> (Edge g -> m ()) -> (Edge g -> m ())
-        -> Mut2 s q k -> Mut2 s colors VisitStatus -> Mut s g -> k -> m ()
+        -> Mut s q k -> Mut s colors VisitStatus -> Mut s g -> k -> m ()
 
 instance (
         GraphReqs g k h e l z,

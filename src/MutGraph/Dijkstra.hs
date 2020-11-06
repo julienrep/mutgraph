@@ -37,25 +37,25 @@ class DijkstraSimpleM g labels where
 class DijkstraM g q scanned labels where
     dijkstraM :: (MutMonad s m, GraphReqs g k h e l z, 
         k ~ KeyOf scanned, k ~ KeyOf labels, Num e, Ord e) => 
-        Mut2 s scanned Bool -> Mut2 s labels e -> Mut2 s q (e, k) ->
+        Mut s scanned Bool -> Mut s labels e -> Mut s q (e, k) ->
         Cst s g -> k -> m ()
 
 class DijkstraInitM g q scanned labels where
     dijkstraInitM :: (MutMonad s m, GraphReqs g k h e l z, 
         k ~ KeyOf scanned, k ~ KeyOf labels, Num e, Ord e) =>
-        Mut2 s scanned Bool -> Mut2 s labels e -> Mut2 s q (e, k) ->
+        Mut s scanned Bool -> Mut s labels e -> Mut s q (e, k) ->
         Cst s g -> k -> m ()
 
 class DijkstraLoopM g q scanned labels where
     dijkstraLoopM :: (MutMonad s m, GraphReqs g k h e l z, 
         k ~ KeyOf scanned, k ~ KeyOf labels, Num e, Ord e) => 
-        Mut2 s scanned Bool -> Mut2 s labels e -> Mut2 s q (e, k) ->
+        Mut s scanned Bool -> Mut s labels e -> Mut s q (e, k) ->
         Cst s g -> m ()
 
 class DijkstraScanM g q labels where
     dijkstraScanM :: (MutMonad s m, GraphReqs g k h e l z, 
         k ~ KeyOf labels, Num e, Ord e) =>
-        Mut2 s labels e -> Mut2 s q (e, k) -> Cst s g -> k -> e -> m ()
+        Mut s labels e -> Mut s q (e, k) -> Cst s g -> k -> e -> m ()
 
 
 instance (
@@ -139,13 +139,13 @@ instance (
 type GenInputs g k h e l z = (g, k)
 type GenOutputs labels e = (labels e)
 type InputsM m s g k e labels scanned q = (
-        Mut2 s scanned Bool,
-        Mut2 s labels e,
-        Mut2 s q (e, k),
+        Mut s scanned Bool,
+        Mut s labels e,
+        Mut s q (e, k),
         Cst s g,
         k
     )
-type OutputsM m s g e labels = (Mut2 s labels e, Cst s g)
+type OutputsM m s g e labels = (Mut s labels e, Cst s g)
 type GenInputsM s m g k h e l z = (Cst s g, k)
 type GenOutputsM s m labels e = (labels e)
 
@@ -208,7 +208,7 @@ instance (
                 m (InputsM m s g k e labels scanned q)
             formatInputsM (mgraph, source) = do
                 n <- getGraphNodeCountC mgraph
-                queue_vec :: Mut2 s qvec (e, k) <- replicateM n $ return (0, 0)
+                queue_vec :: Mut s qvec (e, k) <- replicateM n $ return (0, 0)
                 queue <- makeHeapM queue_vec (0 :: z)
                 labels <- replicateM n $ return 0
                 scanned <- replicateM n $ return False

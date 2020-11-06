@@ -19,13 +19,13 @@ type HeapReqs v k z a = (
     )
 
 newtype Heap (v :: * -> *) (z :: *) (a :: *) = Heap (v a, z)
-type instance Mut2 s (Heap v z) = Heap (MutSP (Mut2 s v)) (Mut s (MutV z))
-type instance Cst2 s (Heap v z) = Heap (MutSP (Cst2 s v)) (Mut s (MutV z))
-type instance Mut s (Heap v z a) = Heap (MutSP (Mut2 s v)) (Mut s (MutV z)) a
-type instance Cst s (Heap v z a) = Heap (MutSP (Cst2 s v)) (Mut s (MutV z)) a
+type instance Mut s (Heap v z) = Heap (MutSP (Mut s v)) (Mut s (MutV z))
+type instance Cst s (Heap v z) = Heap (MutSP (Cst s v)) (Mut s (MutV z))
+type instance Mut s (Heap v z a) = Heap (MutSP (Mut s v)) (Mut s (MutV z)) a
+type instance Cst s (Heap v z a) = Heap (MutSP (Cst s v)) (Mut s (MutV z)) a
 
 class MakeHeapM (v :: * -> *) (h :: * -> *) (a :: *) (z :: *) where
-    makeHeapM :: (MutMonad s m) => Mut2 s v a -> z -> m (Mut2 s h a)
+    makeHeapM :: (MutMonad s m) => Mut s v a -> z -> m (Mut s h a)
 instance MakeHeapM v (Heap v z) a z where
     makeHeapM v z = newMutV z >>= \zVar -> return (Heap (MutSP v, zVar))
 
@@ -47,7 +47,7 @@ instance (HeapReqs v k z a) => ReadC (Heap v z) a where
     {-# INLINE readC #-}
 swapM :: forall l a k s m. (MutMonad s m, 
     k ~ KeyOf l, ReadC l a, WriteM l a, MutToCst2 l a) =>
-    Mut2 s l a -> k -> k -> m ()
+    Mut s l a -> k -> k -> m ()
 swapM v i j = do
                 x <- readC (c2 v) i
                 y <- readC (c2 v) j
@@ -82,7 +82,7 @@ instance (HeapReqs v k z a, Bounded a, MutToCst2 (Heap v z) a) => ExtractMinM (H
         return rootValue
     {-# INLINE extractMinM #-}
 
--- assertLegalIndex :: (MutMonad s m, l ~ Heap v z, GetSizeC l a, Num (SizeOf l), Ord (SizeOf l)) => Mut2 s l a -> SizeOf l -> m Bool
+-- assertLegalIndex :: (MutMonad s m, l ~ Heap v z, GetSizeC l a, Num (SizeOf l), Ord (SizeOf l)) => Mut s l a -> SizeOf l -> m Bool
 -- assertLegalIndex heap index = 
 --     assert (index >= 0)
 --     $ do
@@ -104,7 +104,7 @@ rightKey i = 2 * i + 2
 fixHeapProperty :: forall l a k s m. (MutMonad s m, 
     k ~ KeyOf l, Integral k,
     ReadC l a, WriteM l a, Ord a, MutToCst2 l a) =>
-    Mut2 s l a -> k -> m ()
+    Mut s l a -> k -> m ()
 fixHeapProperty h _k =
     readC (c2 h) _k >>= loop _k
     where 
@@ -119,7 +119,7 @@ fixHeapProperty h _k =
 minHeapify :: forall l a k s m. (MutMonad s m, GetSizeC l a,
     k ~ KeyOf l, k ~ SizeOf l, Num k, Ord k,
     ReadC l a, WriteM l a, Bounded a, Ord a, MutToCst2 l a) =>
-    Mut2 s l a -> k -> m ()
+    Mut s l a -> k -> m ()
 minHeapify h _k = do
     n <- getSizeC (c2 h)
     hk <- readC (c2 h) _k
