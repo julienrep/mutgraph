@@ -1,7 +1,6 @@
 module MutContainers.Vector (
-    Vec, MVec, DVec, MDVec,
-    Vector, VectorU, VectorS,
-    MVector, MVectorU, MVectorS,
+    Vec, DVec,
+    Vector, VectorU, VectorS, VectorM,
     DVector, DVectorU, DVectorS,
 )
 where
@@ -9,6 +8,7 @@ import Prelude
 import Control.Monad
 import Control.DeepSeq
 import MutState.State
+import qualified MutContainers.Tri.Map as T
 import MutContainers.Bi.Container
 import MutContainers.Bi.Map
 import MutContainers.Bi.Size
@@ -22,35 +22,61 @@ import qualified Data.Vector.Generic.Mutable   as VM
 import qualified Data.Vector                   as VI
 import qualified Data.Vector.Unboxed           as VU
 import qualified Data.Vector.Storable          as VS
-import qualified Data.Vector.Mutable           as VMI
-import qualified Data.Vector.Unboxed.Mutable   as VMU
-import qualified Data.Vector.Storable.Mutable  as VMS
+-- import qualified Data.Vector.Mutable           as VMI
+-- import qualified Data.Vector.Unboxed.Mutable   as VMU
+-- import qualified Data.Vector.Storable.Mutable  as VMS
 import MutContainers.Any.Map
 
 newtype Vec (v :: * -> *) (k :: *) (a :: *) = Vec (v a)
 newtype MVec (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = MVec (mv s a)
+type instance Mut s (Vec v) = MVec (V.Mutable v) s
+type instance Cst s (Vec v) = MVec (V.Mutable v) s
 type instance Mut s (Vec v k) = MVec (V.Mutable v) s k
 type instance Cst s (Vec v k) = MVec (V.Mutable v) s k
 type instance Mut s (Vec v k a) = MVec (V.Mutable v) s k a
 type instance Cst s (Vec v k a) = MVec (V.Mutable v) s k a
+type instance KeyOf (Vec v k) = Int
+type instance SizeOf (Vec v k) = KeyOf (Vec v k)
+type instance ValOf (Vec v k a) = a
+type instance KeyOf (Vec v k a) = KeyOf (Vec v k)
+type instance M.SizeOf (Vec v k a) = SizeOf (Vec v k)
 
 newtype DVec (v :: * -> *) (k :: *) (a :: *) = DVec (v a)
 newtype MDVec (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = 
     MDVec (Mut s (MutV (mv s a)))
+type instance Mut s (DVec v) = MDVec (V.Mutable v) s
+type instance Cst s (DVec v) = MDVec (V.Mutable v) s
 type instance Mut s (DVec v k) = MDVec (V.Mutable v) s k
 type instance Cst s (DVec v k) = MDVec (V.Mutable v) s k
 type instance Mut s (DVec v k a) = MDVec (V.Mutable v) s k a
 type instance Cst s (DVec v k a) = MDVec (V.Mutable v) s k a
+type instance KeyOf (DVec v k) = KeyOf (Vec v k)
+type instance SizeOf (DVec v k) = SizeOf (Vec v k)
+type instance ValOf (DVec v k a) = a
+type instance KeyOf (DVec v k a) = KeyOf (Vec v k a)
+type instance M.SizeOf (DVec v k a) = M.SizeOf (Vec v k a)
+
+newtype VecM (v :: * -> *) (k :: *) (a :: *) = VecM (v a)
+newtype MVecM (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = MVecM (mv s a)
+type instance Mut s (VecM v k a) = MVecM (V.Mutable v) s k (Mut s a)
+type instance Cst s (VecM v k a) = MVecM (V.Mutable v) s k (Cst s a)
+type instance KeyOf (VecM v k) = Int
+type instance SizeOf (VecM v k) = KeyOf (VecM v k)
+type instance ValOf (VecM v k a) = a
+type instance KeyOf (VecM v k a) = KeyOf (VecM v k)
+type instance M.SizeOf (VecM v k a) = SizeOf (VecM v k)
 
 type Vector = Vec VI.Vector Int
 type VectorU = Vec VU.Vector Int
 type VectorS = Vec VS.Vector Int
-type MVector = MVec VMI.MVector Int
-type MVectorU = MVec VMU.MVector Int
-type MVectorS = MVec VMS.MVector Int
+-- type MVector = MVec VMI.MVector Int
+-- type MVectorU = MVec VMU.MVector Int
+-- type MVectorS = MVec VMS.MVector Int
 type DVector = DVec VI.Vector Int
 type DVectorU = DVec VU.Vector Int
 type DVectorS = DVec VS.Vector Int
+
+type VectorM = VecM VI.Vector Int
 
 -- inherit typeclasses -- need to find some automated deriving mechanism
 instance (NFData (v a)) => NFData (Vec v k a) where
@@ -95,17 +121,28 @@ instance (Monoid (v a)) => Monoid (Vec v k a) where
 
 
 -- Vector
+-- tri kinded imports
 
-type instance KeyOf (Vec v k) = Int
-type instance KeyOf (DVec v k) = Int
-type instance SizeOf (Vec v k) = KeyOf (Vec v k)
-type instance SizeOf (DVec v k) = KeyOf (DVec v k)
-type instance M.SizeOf (Vec v k a) = KeyOf (Vec v k)
-type instance M.SizeOf (DVec v k a) = KeyOf (DVec v k)
-type instance ValOf (Vec v k a) = a
-type instance ValOf (DVec v k a) = a
-type instance KeyOf (Vec v k a) = KeyOf (Vec v k)
-type instance KeyOf (DVec v k a) = KeyOf (DVec v k)
+instance (mv ~ V.Mutable v, VM.MVector mv a) => T.WriteM (Vec v) Int a where
+    writeM (MVec mv) = VM.unsafeWrite mv
+    {-# INLINE writeM #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => T.WriteM (DVec v) Int a where
+    writeM (MDVec vl) k a = readMutV vl >>= \l -> VM.unsafeWrite l k a
+    {-# INLINE writeM #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => T.ReadC (Vec v) Int a where
+    readC (MVec mv) = VM.unsafeRead mv
+    {-# INLINE readC #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => T.ReadC (DVec v) Int a where
+    readC (MDVec vl) k = readMutV vl >>= \l -> VM.unsafeRead l k
+    {-# INLINE readC #-}
+instance (V.Vector v a) => T.ReadAt (Vec v) Int a where
+    at (Vec v) = (V.!) v
+    {-# INLINE at #-}
+instance (V.Vector v a) => T.ReadAt (DVec v) Int a where
+    (DVec v) `at` u = v V.! u
+    {-# INLINE at #-}
+
+-- bi kinded imports
 
 instance (mv ~ V.Mutable v, VM.MVector mv a) => WriteM (Vec v k) a where
     writeM (MVec mv) = VM.unsafeWrite mv
@@ -241,18 +278,24 @@ instance (mv ~ V.Mutable v, VM.MVector mv a) => EnsureSizeM (DVec v k) a where
 instance (mv ~ V.Mutable v, VM.MVector mv a) => M.WriteM (Vec v k a) where
     writeM (MVec mv) = VM.unsafeWrite mv
     {-# INLINE writeM #-}
--- instance (mv ~ V.Mutable v, VM.MVector mv a) => M.WriteMM (Vec v k a) where
---     writeMM (MVec mv) = VM.unsafeWrite mv
---     {-# INLINE writeMM #-}
 instance (mv ~ V.Mutable v, VM.MVector mv a) => M.WriteM (DVec v k a) where
     writeM (MDVec vl) k a = readMutV vl >>= \l -> VM.unsafeWrite l k a
     {-# INLINE writeM #-}
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => M.WriteMM (VecM v k a) where
+    writeMM (MVecM mv) = VM.unsafeWrite mv
+    {-# INLINE writeMM #-}
 instance (mv ~ V.Mutable v, VM.MVector mv a) => M.ReadC (Vec v k a) where
     readC (MVec mv) = VM.unsafeRead mv
     {-# INLINE readC #-}
 instance (mv ~ V.Mutable v, VM.MVector mv a) => M.ReadC (DVec v k a) where
     readC (MDVec vl) k = readMutV vl >>= \l -> VM.unsafeRead l k
     {-# INLINE readC #-}
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b, MutToCst a) => M.ReadCC (VecM v k a) where
+    readCC (MVecM mv) = VM.unsafeRead mv
+    {-# INLINE readCC #-}
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => M.ReadMM (VecM v k a) where
+    readMM (MVecM mv) = VM.unsafeRead mv
+    {-# INLINE readMM #-}
 
 instance (V.Vector v a) => M.Convert (Vec v k a) (v a) where
     convert (Vec v) = v

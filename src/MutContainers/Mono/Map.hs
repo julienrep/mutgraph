@@ -4,7 +4,7 @@ module MutContainers.Mono.Map (
         WriteMC(..),
         ReadC(..),
         ReadCC(..),
-        ReadCM(..),
+        ReadMM(..),
         modifyM,
         ReadAt(..),
     )
@@ -32,9 +32,9 @@ class ReadC h where
 class ReadCC h where
     readCC :: (MutMonad s m, k ~ KeyOf h, a ~ ValOf h) =>
         Cst s h -> k -> m (Cst s a)
-class ReadCM h where
-    readCM :: (MutMonad s m, k ~ KeyOf h, a ~ ValOf h) =>
-        Cst s h -> k -> m (Mut s a)
+class ReadMM h where
+    readMM :: (MutMonad s m, k ~ KeyOf h, a ~ ValOf h) =>
+        Mut s h -> k -> m (Mut s a)
 
 modifyM :: (MutMonad s m, k ~ KeyOf h, a ~ ValOf h, 
     ReadC h, WriteM h, MutToCst h) =>
