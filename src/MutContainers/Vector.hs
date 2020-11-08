@@ -9,6 +9,7 @@ import Prelude
 import Control.Monad
 import Control.DeepSeq
 import MutState.State
+import qualified MutContainers.Tri.Map as T
 import MutContainers.Bi.Container
 import MutContainers.Bi.Map
 import MutContainers.Bi.Size
@@ -29,6 +30,8 @@ import MutContainers.Any.Map
 
 newtype Vec (v :: * -> *) (k :: *) (a :: *) = Vec (v a)
 newtype MVec (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = MVec (mv s a)
+type instance Mut s (Vec v) = MVec (V.Mutable v) s
+type instance Cst s (Vec v) = MVec (V.Mutable v) s
 type instance Mut s (Vec v k) = MVec (V.Mutable v) s k
 type instance Cst s (Vec v k) = MVec (V.Mutable v) s k
 type instance Mut s (Vec v k a) = MVec (V.Mutable v) s k a
@@ -37,6 +40,8 @@ type instance Cst s (Vec v k a) = MVec (V.Mutable v) s k a
 newtype DVec (v :: * -> *) (k :: *) (a :: *) = DVec (v a)
 newtype MDVec (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = 
     MDVec (Mut s (MutV (mv s a)))
+type instance Mut s (DVec v) = MDVec (V.Mutable v) s
+type instance Cst s (DVec v) = MDVec (V.Mutable v) s
 type instance Mut s (DVec v k) = MDVec (V.Mutable v) s k
 type instance Cst s (DVec v k) = MDVec (V.Mutable v) s k
 type instance Mut s (DVec v k a) = MDVec (V.Mutable v) s k a
@@ -106,6 +111,29 @@ type instance ValOf (Vec v k a) = a
 type instance ValOf (DVec v k a) = a
 type instance KeyOf (Vec v k a) = KeyOf (Vec v k)
 type instance KeyOf (DVec v k a) = KeyOf (DVec v k)
+
+-- tri kinded imports
+
+instance (mv ~ V.Mutable v, VM.MVector mv a) => T.WriteM (Vec v) Int a where
+    writeM (MVec mv) = VM.unsafeWrite mv
+    {-# INLINE writeM #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => T.WriteM (DVec v) Int a where
+    writeM (MDVec vl) k a = readMutV vl >>= \l -> VM.unsafeWrite l k a
+    {-# INLINE writeM #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => T.ReadC (Vec v) Int a where
+    readC (MVec mv) = VM.unsafeRead mv
+    {-# INLINE readC #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => T.ReadC (DVec v) Int a where
+    readC (MDVec vl) k = readMutV vl >>= \l -> VM.unsafeRead l k
+    {-# INLINE readC #-}
+instance (V.Vector v a) => T.ReadAt (Vec v) Int a where
+    at (Vec v) = (V.!) v
+    {-# INLINE at #-}
+instance (V.Vector v a) => T.ReadAt (DVec v) Int a where
+    (DVec v) `at` u = v V.! u
+    {-# INLINE at #-}
+
+-- bi kinded imports
 
 instance (mv ~ V.Mutable v, VM.MVector mv a) => WriteM (Vec v k) a where
     writeM (MVec mv) = VM.unsafeWrite mv

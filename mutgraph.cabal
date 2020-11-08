@@ -33,7 +33,6 @@ library
       MutContainers.Unbox
       MutContainers.Any.Map
       MutContainers.Tri.Map
-      MutContainers.Tri.Heap
       MutContainers.Bi.Container
       MutContainers.Bi.Size
       MutContainers.Bi.List
@@ -49,6 +48,7 @@ library
       MutState.State
       Tests
       Tests.MutGraph.Dijkstra
+      Tests.Sandbox
   other-modules:
       Paths_mutgraph
   hs-source-dirs:
