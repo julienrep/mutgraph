@@ -22,8 +22,8 @@ source-repository head
 library
   exposed-modules:
       MutGraph.Graph
-      MutGraph.AdjacencyList
       MutGraph.AdjacencyList1
+      MutGraph.AdjacencyList2
       MutGraph.Dijkstra
       MutGraph.GraphSearch
       MutGraph.Parser
@@ -32,6 +32,7 @@ library
       MutContainers.Vector
       MutContainers.Unbox
       MutContainers.Any.Map
+      MutContainers.Any.Size
       MutContainers.Tri.Map
       MutContainers.Bi.Container
       MutContainers.Bi.Size

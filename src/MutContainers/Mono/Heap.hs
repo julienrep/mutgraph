@@ -11,10 +11,11 @@ import MutContainers.Mono.Container
 import MutContainers.Mono.Size
 import MutState.State
 import MutContainers.Any.Map
+import MutContainers.Any.Size
 
 newtype Heap h z = Heap (h, z)
-type instance Mut s (Heap h z) = Heap ( (Mut s h)) (Mut s (MutV z))
-type instance Cst s (Heap h z) = Heap ( (Cst s h)) (Cst s (MutV z))
+type instance Mut s (Heap h z) = Heap ( (Mut s h)) (Mut s (Var z))
+type instance Cst s (Heap h z) = Heap ( (Cst s h)) (Cst s (Var z))
 
 type instance KeyOf (Heap h z) = KeyOf h
 type instance ValOf (Heap h z) = ValOf h

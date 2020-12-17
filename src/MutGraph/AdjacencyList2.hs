@@ -1,5 +1,5 @@
-module MutGraph.AdjacencyList (
-    AdjList(..),
+module MutGraph.AdjacencyList2 (
+    AdjList,
 ) where
 import Prelude (Num(..), (.), (<$>), ($))
 import Data.Foldable hiding (concat)
@@ -17,6 +17,7 @@ import MutState.State
 import qualified MutContainers.Mono.Container as M
 import qualified MutContainers.Mono.Size as M
 import MutContainers.Any.Map
+import MutContainers.Any.Size
 
 newtype AdjList 
     (l :: * -> *) (i :: *) (w :: * -> *) (v :: * -> *) (k :: *) (e :: *) = 
@@ -32,9 +33,9 @@ instance (NFData (w (v (k, e)))) => NFData (AdjList l i w v k e) where
   {-# INLINE rnf #-}
 
 type instance Mut s (AdjList l i w v k e) = 
-    AdjList l i (MutSS (Mut s w)) (MutSP (Mut s v)) k e
+    AdjList l i (MM (Mut s w)) (MP (Mut s v)) k e
 type instance Cst s (AdjList l i w v k e) = 
-    AdjList l i (MutSS (Cst s w)) (MutSP (Cst s v)) k e
+    AdjList l i (MM (Cst s w)) (MP (Cst s v)) k e
 
 type AdjListReqs g k h e l z i w v = (
     g ~ AdjList l i w v k e,
@@ -62,15 +63,15 @@ type MutAdjListReqs g k h e l z i w v = (
     AdjListReqs g k h e l z i w v,
     MakeNew w (v (k, e)),
     MakeNewM v (k, e),
-    MakeNewMM w (MutSP v (k, e)),
-    GetSizeCC w (MutSP v (k, e)),
-    SetSizeMM w (MutSP v (k, e)),
-    GrowSizeMM w (MutSP v (k, e)),
-    ShrinkSizeMM w (MutSP v (k, e)),
-    EnsureSizeMM w (MutSP v (k, e)),
-    ReadCC w (MutSP v (k, e)),
-    ReadCM w (MutSP v (k, e)),
-    WriteMM w (MutSP v (k, e)),
+    MakeNewMM w (MP v (k, e)),
+    GetSizeCC w (MP v (k, e)),
+    SetSizeMM w (MP v (k, e)),
+    GrowSizeMM w (MP v (k, e)),
+    ShrinkSizeMM w (MP v (k, e)),
+    EnsureSizeMM w (MP v (k, e)),
+    ReadCC w (MP v (k, e)),
+    ReadCM w (MP v (k, e)),
+    WriteMM w (MP v (k, e)),
     GetSizeC v (k, e),
     ReadC v (k, e),
     WriteM v (k, e),
@@ -122,24 +123,24 @@ instance (AdjListReqs g k h e l z i w v, Monad l) =>
 
 instance (MutAdjListReqs g k h e l z i w v) =>
     GetGraphNodeCountC (AdjList l i w v k e) where
-    getGraphNodeCountC (AdjList (MutSS w)) = getSizeCC w
+    getGraphNodeCountC (AdjList (MM w)) = getSizeCC w
     {-# INLINE getGraphNodeCountC #-}
 
 instance (MutAdjListReqs g k h e l z i w v) =>
     ReadGraphEdgeC (AdjList l i w v k e) where
-    readGraphEdgeC (AdjList (MutSS w)) h = do
+    readGraphEdgeC (AdjList (MM w)) h = do
         let (u, i) = h
-        MutSP v <- readCC w u
+        MP v <- readCC w u
         (k, e) <- readC v i
         return (Edge (u, k, e, h))
     {-# INLINE readGraphEdgeC #-}
 
 instance (MutAdjListReqs g k h e l z i w v, 
-    MutToCst2 w (MutSP v (k, e)),
+    MutToCst2 w (MP v (k, e)),
     MutToCst2 v (k, e)) =>
     WriteGraphEdgeM (AdjList l i w v k e) where
-    writeGraphEdgeM (AdjList (MutSS w)) (u, i) e = readCM (c2M w) u >>= 
-        \(MutSP v) -> modifyM v i (\(k, _) -> (k, e))
+    writeGraphEdgeM (AdjList (MM w)) (u, i) e = readCM (c2M w) u >>= 
+        \(MP v) -> modifyM v i (\(k, _) -> (k, e))
     {-# INLINE writeGraphEdgeM #-}
 
 instance (MutAdjListReqs g k h e l z i w v, GetGraphNodeCountC g) => 
@@ -152,8 +153,8 @@ instance (MutAdjListReqs g k h e l z i w v, GetGraphNodeCountC g) =>
 
 instance (MutAdjListReqs g k h e l z i w v) =>
     ListGraphEdgesFromC (AdjList l i w v k e) where
-    listGraphEdgesFromC (AdjList (MutSS w)) u = do
-        MutSP mv <- readCC w u
+    listGraphEdgesFromC (AdjList (MM w)) u = do
+        MP mv <- readCC w u
         v <- ufreezeC mv
         return  ( (convert :: v (Edge g) -> l (Edge g)) 
                 (map (\((k, e), h) -> Edge (u, k, e, h))
@@ -179,23 +180,23 @@ instance (MutAdjListReqs g k h e l z i w v, Traversable l, Monad l) =>
 
 instance (MutAdjListReqs g k h e l z i w v, Ord k,
     M.EnsureSizeM (SizeViaNodes g),
-    MutToCst2 w (MutSP v (k, e)),
+    MutToCst2 w (MP v (k, e)),
     MutToCst2 v (k, e)
     ) => AddGraphEdgeM (AdjList l i w v k e) where
     addGraphEdgeM graph (u, u', e) = do
         M.ensureSizeM (SizeViaNodes graph) (u' + 1)
-        let (AdjList (MutSS w)) = graph
-        MutSP v <- readCM (c2M w) u
+        let (AdjList (MM w)) = graph
+        MP v <- readCM (c2M w) u
         h <- (u,) <$> getSizeC (c2 v)
         fv <- ufreezeC (c2 v)
         nv <- uthawM (concat fv (replicate 1 (u', e)))
-        writeMM w u (MutSP nv)
+        writeMM w u (MP nv)
         return h
     {-# INLINE addGraphEdgeM #-}
 
 instance (MutAdjListReqs g k h e l z i w v) =>
     M.MakeNewM (AdjList l i w v k e) where
-    makeNewM = makeNewMM >>= (return . AdjList . MutSS)
+    makeNewM = makeNewMM >>= (return . AdjList . MM)
     {-# INLINE makeNewM #-}
 
 instance (MutAdjListReqs g k h e l z i w v, M.MakeNewM (AdjList l i w v k e)) =>
@@ -215,9 +216,9 @@ instance (MutAdjListReqs g k h e l z i w v,
             let (AdjList w) = graph
             mw <- makeNewMM 
             setSizeMM mw (getGraphNodeCount graph)
-            mapM_ (\u -> (MutSP <$> uthawM (w `at` u)) >>= writeMM mw u)
+            mapM_ (\u -> (MP <$> uthawM (w `at` u)) >>= writeMM mw u)
                 (listGraphNodes graph)
-            return (AdjList (MutSS mw))
+            return (AdjList (MM mw))
     {-# INLINE uthawM #-}
 
 instance (MutAdjListReqs g k h e l z i w v,
@@ -232,12 +233,12 @@ instance (MutAdjListReqs g k h e l z i w v,
     MutToCst2 w (v (k, e))
     ) => M.UFreezeC (AdjList l i w v k e) where
     ufreezeC graph = do
-            let (AdjList (MutSS mw)) = graph
+            let (AdjList (MM mw)) = graph
             x <- makeNewM
             getGraphNodeCountC graph >>= setSizeM x
             listGraphNodesC graph >>=
                 mapM_ (\u -> do
-                    MutSP mv <- readCC mw u
+                    MP mv <- readCC mw u
                     ufreezeC mv >>= writeM x u
                     )
             w <- ufreezeC (c2 x)
@@ -267,7 +268,7 @@ instance (forall s . MakeGraphFromEdgesST (ST s) (AdjList l i w v k e) list) =>
 newtype SizeViaNodes g = SizeViaNodes g
 type instance Mut s (SizeViaNodes g) = SizeViaNodes (Mut s g)
 type instance Cst s (SizeViaNodes g) = SizeViaNodes (Cst s g)
-type instance M.SizeOf (SizeViaNodes (AdjList l i w v k e)) =
+type instance SizeOf (SizeViaNodes (AdjList l i w v k e)) =
     VertexKeyOf (AdjList l i w v k e)
 
 instance (MutAdjListReqs g k h e l z i w v, 
@@ -281,16 +282,16 @@ instance (MutAdjListReqs g k h e l z i w v,
     MutToCst (SizeViaNodes g)
     ) => M.GrowSizeM (SizeViaNodes (AdjList l i w v k e)) where
     growSizeM graph addedCount = do
-        let (SizeViaNodes (AdjList (MutSS mw))) = graph
+        let (SizeViaNodes (AdjList (MM mw))) = graph
         n <- M.getSizeC (cst graph)
         let l :: l z = enumFromTo n (n + addedCount - 1)
         growSizeMM mw addedCount
-        mapM_ (\k -> makeNewM >>= \v -> writeMM mw k (MutSP v)) l
+        mapM_ (\k -> makeNewM >>= \v -> writeMM mw k (MP v)) l
     {-# INLINE growSizeM #-}
 
 instance (MutAdjListReqs g k h e l z i w v) =>
     M.ShrinkSizeM (SizeViaNodes (AdjList l i w v k e)) where
-    shrinkSizeM (SizeViaNodes (AdjList (MutSS mw))) = shrinkSizeMM mw
+    shrinkSizeM (SizeViaNodes (AdjList (MM mw))) = shrinkSizeMM mw
     {-# INLINE shrinkSizeM #-}
 
 instance (MutAdjListReqs g k h e l z i w v, Ord k,

@@ -23,8 +23,8 @@ import qualified MutContainers.Mono.Container as M
 import MutContainers.Run
 import MutContainers.Curry
 import MutContainers.Bi.Heap
-import MutContainers.Bi.Size
 import MutContainers.Any.Map
+import MutContainers.Any.Size
 
 class Dijkstra g labels where
     dijkstra :: (GraphReqs g k h e l z, k ~ KeyOf labels, Num e, Ord e) =>

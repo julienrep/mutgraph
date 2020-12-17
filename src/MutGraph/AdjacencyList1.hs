@@ -1,5 +1,6 @@
 module MutGraph.AdjacencyList1 (
-    AdjList(..),
+    AdjList,
+    AdjLst,
 ) where
 import Prelude (Num(..), (.), (<$>), ($))
 import Data.Foldable hiding (concat)
@@ -16,6 +17,11 @@ import MutContainers.Mono.List
 import qualified MutContainers.Bi.List as B
 import MutState.State
 import MutContainers.Any.Map
+import MutContainers.Any.Size
+
+type AdjLst 
+    (l :: * -> *) (i :: *) (w :: * -> *) (v :: * -> *) (k :: *) (e :: *) = 
+        AdjList l i (w (v (k, e))) (v (k, e)) k e
 
 newtype AdjList 
     (l :: * -> *) (i :: *) (w :: *) (v :: *) (k :: *) (e :: *) = 
@@ -100,7 +106,7 @@ instance (AdjListReqs g k h e l z i w v, GetGraphNodeCount g) =>
     listGraphNodes g = enumFromTo 0 (getGraphNodeCount g - 1)
     {-# INLINE listGraphNodes #-}
 
-instance (AdjListReqs g k h e l z i w v, GetGraphNodeCount g) =>
+instance (AdjListReqs g k h e l z i w v) =>
     ListGraphEdgesFrom (AdjList l i w v k e) where
     listGraphEdgesFrom (AdjList w) u =
             B.map (\((k, e), h) -> Edge (u, k, e, h))
@@ -128,7 +134,7 @@ instance (MutAdjListReqs g k h e l z i w v) =>
         return (Edge (u, k, e, h))
     {-# INLINE readGraphEdgeC #-}
 
-instance (MutAdjListReqs g k h e l z i w v, MutToCst v, MutToCst w) =>
+instance (MutAdjListReqs g k h e l z i w v, MutToCst v) =>
     WriteGraphEdgeM (AdjList l i w v k e) where
     writeGraphEdgeM (AdjList w) (u, i) e = readMM w u >>= 
         \v -> modifyM v i (\(k, _) -> (k, e))
@@ -187,37 +193,14 @@ instance (MutAdjListReqs g k h e l z i w v, AddGraphEdgeM g) =>
     MakeGraphFromEdgesM (AdjList l i w v k e) list
 
 instance (MutAdjListReqs g k h e l z i w v,
-    GetGraphNodeCount g,
-    ListGraphNodes g,
-    Foldable l
+    UThawM w
     ) => UThawM (AdjList l i w v k e) where
-    uthawM graph = do
-            let (AdjList w) = graph
-            mw <- makeNewM 
-            setSizeM mw (getGraphNodeCount graph)
-            mapM_ (\u -> uthawM (w `at` u) >>= writeMM mw u)
-                (listGraphNodes graph)
-            return (AdjList mw)
+    uthawM (AdjList w) = AdjList <$> uthawM w
     {-# INLINE uthawM #-}
 
-instance (MutAdjListReqs g k h e l z i w v,
-    GetGraphNodeCountC g,
-    ListGraphNodesC g,
-    WriteM w,
-    Foldable l,
-    MutToCst w
+instance (MutAdjListReqs g k h e l z i w v
     ) => UFreezeC (AdjList l i w v k e) where
-    ufreezeC graph = do
-            let (AdjList mw) = graph
-            x <- makeNewM
-            getGraphNodeCountC graph >>= setSizeM x
-            listGraphNodesC graph >>=
-                mapM_ (\u -> do
-                    mv <- readCC mw u
-                    ufreezeC mv >>= writeM x u
-                    )
-            w <- ufreezeC (cst x)
-            return (AdjList w)
+    ufreezeC (AdjList mw) = AdjList <$> ufreezeC mw
     {-# INLINE ufreezeC #-}
 
 class MakeGraphFromEdgesST m g list where 

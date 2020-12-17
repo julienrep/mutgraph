@@ -15,7 +15,7 @@ module MutContainers.Bi.List (
     )
 where
 import qualified Prelude
-import MutContainers.Bi.Size
+import MutContainers.Any.Size
 import MutState.State
 
 class Zip (l :: * -> *) a b where zip :: l a -> l b -> l (a, b)

@@ -15,6 +15,7 @@ import MutContainers.Bi.Size
 import MutState.State
 import Control.Monad hiding (replicateM)
 import MutContainers.Any.Map
+import MutContainers.Any.Size
 
 dputs :: String -> IO ()
 dputs = putStr

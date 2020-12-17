@@ -13,8 +13,8 @@ module MutState.State (
     MutToCst, cst,
     MutToCst2, c2, c2C, c2M, m1m2, c1c2, m2m1, c2c1, c1m2, c2m1,
     MutToCst3, c3, m1m3, m2m3, m3m2, m3m1, c1c3, c2c3, c3c2, c3c1, c1m3, c2m3, c3m2, c3m1,
-    MutV(..),
-    MutSP(..), MutSS(..),
+    Var(..),
+    MP(..), MM(..),
     readMutV, writeMutV, modifyMutV, newMutV,
     )
 where
@@ -29,9 +29,9 @@ type MutMonad s m = (PrimMonad m, s ~ PrimState m)
 -- type family Mut s (x :: k) = (r :: k) | r -> x s -- denotes a type that can be mutated freely
 -- type family Cst s (x :: k) = (r :: k) | r -> x s -- denotes a type that depends on state but which is read-only
 
-newtype MutV x = MutV x
-type instance Mut s (MutV x) = MutVar s x
-type instance Cst s (MutV x) = MutVar s x
+newtype Var x = Var x
+type instance Mut s (Var x) = MutVar s x
+type instance Cst s (Var x) = MutVar s x
 
 
 type family Mut s (x :: k) = (r :: k) | r -> x s
@@ -129,31 +129,31 @@ type MutToCst3 (h :: * -> * -> *) k a = forall s. MutToCstFunc3 s h k a
 
 
 -- tricks to allow using nested state newtypes without explicit 's'
-newtype MutSP l a = MutSP (l a) -- this is for a * -> * that depends on State but elements are Pure
-newtype MutSS l a = MutSS (l a) -- this is for a * -> * that depends on State and elements depend on State
-instance (NFData (l a)) => NFData (MutSP l a) where
-  rnf (MutSP l) = rnf l
+newtype MP l a = MP (l a) -- this is for a * -> * that depends on State but elements are Pure
+newtype MM l a = MM (l a) -- this is for a * -> * that depends on State and elements depend on State
+instance (NFData (l a)) => NFData (MP l a) where
+  rnf (MP l) = rnf l
   {-# INLINE rnf #-}
-instance (NFData (l a)) => NFData (MutSS l a) where
-  rnf (MutSS l) = rnf l
+instance (NFData (l a)) => NFData (MM l a) where
+  rnf (MM l) = rnf l
   {-# INLINE rnf #-}
-type instance Mut s (MutSP l a) = MutSP (Mut s l) a
-type instance Mut s (MutSS l a) = MutSS (Mut s l) (Mut s a)
-type instance Cst s (MutSP l a) = MutSP (Cst s l) a
-type instance Cst s (MutSS l a) = MutSS (Cst s l) (Cst s a)
-type instance Mut s (MutSP l) = MutSP (Mut s l)
-type instance Cst s (MutSP l) = MutSP (Cst s l)
+type instance Mut s (MP l a) = MP (Mut s l) a
+type instance Mut s (MM l a) = MM (Mut s l) (Mut s a)
+type instance Cst s (MP l a) = MP (Cst s l) a
+type instance Cst s (MM l a) = MM (Cst s l) (Cst s a)
+type instance Mut s (MP l) = MP (Mut s l)
+type instance Cst s (MP l) = MP (Cst s l)
 
 
-newMutV :: (MutMonad s m) => a -> m (Mut s (MutV a))
+newMutV :: (MutMonad s m) => a -> m (Mut s (Var a))
 newMutV = newMutVar
 {-# INLINE newMutV #-}
-readMutV :: (MutMonad s m) => Mut s (MutV a) -> m a
+readMutV :: (MutMonad s m) => Mut s (Var a) -> m a
 readMutV = readMutVar
 {-# INLINE readMutV #-}
-writeMutV :: (MutMonad s m) => Mut s (MutV a) -> a -> m ()
+writeMutV :: (MutMonad s m) => Mut s (Var a) -> a -> m ()
 writeMutV = writeMutVar
 {-# INLINE writeMutV #-}
-modifyMutV :: (MutMonad s m) => Mut s (MutV a) -> (a -> a) -> m ()
+modifyMutV :: (MutMonad s m) => Mut s (Var a) -> (a -> a) -> m ()
 modifyMutV = modifyMutVar
 {-# INLINE modifyMutV #-}

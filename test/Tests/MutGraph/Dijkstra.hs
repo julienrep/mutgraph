@@ -14,7 +14,7 @@ import Control.Monad
 import Control.Monad.Primitive
 import MutState.State
 import MutGraph.Graph
-import MutGraph.AdjacencyList
+import MutGraph.AdjacencyList1
 import MutGraph.Dijkstra
 import MutGraph.Parser
 import MutContainers.Curry
@@ -35,18 +35,18 @@ tests = TestList [
         TestLabel "test1" test1
         ]
 
-type GGG = (AdjList Vector Int DVector VectorU Int Int)
--- type GGG = (AdjList Vector Int (DVectorM (VectorU (Int, Int))) (VectorU (Int, Int)) Int Int)
+-- type GGG e = AdjList Vector Int DVector VectorU Int e
+type GGG e = AdjLst Vector Int DVectorM VectorU Int e
 
 dijkstraFormatInputsM :: (MutMonad s IO, Foldable list) => 
     (list (Int, Int, Int), Int)
-    -> IO (Mut s GGG, Int)
+    -> IO (Mut s (GGG Int), Int)
 dijkstraFormatInputsM (list, source) = do
     graph <- makeGraphFromEdgesM list
     let inputs = (graph, source)
     return inputs
 dijkstraRunM :: (MutMonad s IO) => 
-    (Mut s GGG, Int)
+    (Mut s (GGG Int), Int)
     -> IO (VectorU Int)
 dijkstraRunM inputs = do
     evaluate (rnf inputs)
@@ -114,17 +114,17 @@ test1 = TestCase $ do
     --         modGraphEdgeM mgraph (*10) h
     --         )
 
-    -- mgraph :: Mut RealWorld (AdjList Vector Int DVector VectorU Int (AAA Int)) <- makeGraphFromEdgesM input2
-    -- listGraphEdgesC mgraph >>=
-    --     mapM_ (\(Edge (u, v, AAA e, h)) -> do
-    --         dputs $ "(" ++ show u
-    --         dputs $ ", " ++ show v
-    --         dputs $ ", " ++ show h
-    --         dputs $ ", " ++ show e
-    --         dputs $ ")" ++ lr
-    --         )
-    -- vout <- dijkstraSimpleM (fmapGraph (\(AAA a) -> a) mgraph) 1
-    -- dputs $ "output: " ++ show (toList vout) ++ lr
+    mgraph :: Mut RealWorld (GGG (AAA Int)) <- makeGraphFromEdgesM input2
+    listGraphEdgesC mgraph >>=
+        mapM_ (\(Edge (u, v, AAA e, h)) -> do
+            dputs $ "(" ++ show u
+            dputs $ ", " ++ show v
+            dputs $ ", " ++ show h
+            dputs $ ", " ++ show e
+            dputs $ ")" ++ lr
+            )
+    vout <- dijkstraSimpleM (fmapGraph (\(AAA a) -> a) mgraph) 1
+    dputs $ "output: " ++ show (toList vout) ++ lr
     return ()
 
 newtype AAA a = AAA a

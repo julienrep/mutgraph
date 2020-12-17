@@ -1,5 +1,4 @@
 module MutContainers.Mono.Size (
-    SizeOf,
     GetSize(..),
     GetSizeC(..),
     GrowSizeM(..),
@@ -11,8 +10,8 @@ module MutContainers.Mono.Size (
 import Prelude
 import Control.Monad
 import MutState.State
+import MutContainers.Any.Size
 
-type family SizeOf (x :: *) :: *
 
 class GetSize x where
     getSize :: (z ~ SizeOf x) => x -> z
@@ -39,9 +38,9 @@ class ModifySizeM x where
         (MutMonad s m, z ~ SizeOf x, Monad m) => Mut s x -> (z -> z) -> m ()
     modifySizeM x f = do
         size <- getSizeC (cst x)
-        let diff = (f size) - size
+        let diff = f size - size
         if diff > 0 then growSizeM x diff
-        else when (diff < 0) $ shrinkSizeM x diff
+        else when (diff < 0) $ shrinkSizeM x (-diff)
     {-# INLINE modifySizeM #-}
 class SetSizeM x where
     setSizeM ::

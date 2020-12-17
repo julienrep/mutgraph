@@ -14,10 +14,10 @@ module MutContainers.Mono.List (
         PopBackM(..),
 ) where
 import qualified Prelude
-import MutContainers.Mono.Size
 import MutState.State
 import MutContainers.Mono.Map ()
 import MutContainers.Any.Map
+import MutContainers.Any.Size
 
 class Zip p q r where
     zip :: (a ~ ValOf p, b ~ ValOf q, (a, b) ~ ValOf r) => p -> q -> r

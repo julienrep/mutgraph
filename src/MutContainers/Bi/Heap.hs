@@ -11,6 +11,7 @@ import MutContainers.Bi.Container
 import MutContainers.Bi.Size
 import MutState.State
 import MutContainers.Any.Map
+import MutContainers.Any.Size
 
 type HeapReqs v k z a = (
     z ~ k,
@@ -20,15 +21,15 @@ type HeapReqs v k z a = (
     )
 
 newtype Heap (v :: * -> *) (z :: *) (a :: *) = Heap (v a, z)
-type instance Mut s (Heap v z) = Heap (MutSP (Mut s v)) (Mut s (MutV z))
-type instance Cst s (Heap v z) = Heap (MutSP (Cst s v)) (Mut s (MutV z))
-type instance Mut s (Heap v z a) = Heap (MutSP (Mut s v)) (Mut s (MutV z)) a
-type instance Cst s (Heap v z a) = Heap (MutSP (Cst s v)) (Mut s (MutV z)) a
+type instance Mut s (Heap v z) = Heap (Mut s v) (Mut s (Var z))
+type instance Cst s (Heap v z) = Heap (Cst s v) (Mut s (Var z))
+type instance Mut s (Heap v z a) = Heap (Mut s v) (Mut s (Var z)) a
+type instance Cst s (Heap v z a) = Heap (Cst s v) (Mut s (Var z)) a
 
 class MakeHeapM (v :: * -> *) (h :: * -> *) (a :: *) (z :: *) where
     makeHeapM :: (MutMonad s m) => Mut s v a -> z -> m (Mut s h a)
 instance MakeHeapM v (Heap v z) a z where
-    makeHeapM v z = newMutV z >>= \zVar -> return (Heap (MutSP v, zVar))
+    makeHeapM v z = newMutV z >>= \zVar -> return (Heap (v, zVar))
 
 type instance SizeOf (Heap v z) = z
 type instance KeyOf (Heap v z) = KeyOf v
@@ -41,10 +42,10 @@ instance (HeapReqs v k z a) => ModifySizeM (Heap v z) a where
     {-# INLINE modifySizeM #-}
 
 instance (HeapReqs v k z a) => WriteM (Heap v z) a where
-    writeM (Heap (MutSP v, _)) = writeM v
+    writeM (Heap (v, _)) = writeM v
     {-# INLINE writeM #-}
 instance (HeapReqs v k z a) => ReadC (Heap v z) a where
-    readC (Heap (MutSP v, _)) = readC v
+    readC (Heap (v, _)) = readC v
     {-# INLINE readC #-}
 swapM :: forall l a k s m. (MutMonad s m, 
     k ~ KeyOf l, ReadC l a, WriteM l a, MutToCst2 l a) =>

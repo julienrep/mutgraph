@@ -13,8 +13,8 @@ import MutGraph.Graph
 import Control.Monad hiding (replicateM)
 import MutContainers.Bi.Container
 import MutContainers.Bi.List
-import MutContainers.Bi.Size
 import MutContainers.Any.Map
+import MutContainers.Any.Size
 
 data VisitStatus = Unvisited | Visiting | Visited
 
