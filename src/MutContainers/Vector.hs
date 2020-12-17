@@ -1,7 +1,7 @@
 module MutContainers.Vector (
     Vec, DVec,
     Vector, VectorU, VectorS, VectorM,
-    DVector, DVectorU, DVectorS,
+    DVector, DVectorU, DVectorS, DVectorM,
 )
 where
 import Prelude
@@ -66,6 +66,17 @@ type instance ValOf (VecM v k a) = a
 type instance KeyOf (VecM v k a) = KeyOf (VecM v k)
 type instance M.SizeOf (VecM v k a) = SizeOf (VecM v k)
 
+newtype DVecM (v :: * -> *) (k :: *) (a :: *) = DVecM (v a)
+newtype MDVecM (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = 
+    MDVecM (Mut s (MutV (mv s a)))
+type instance Mut s (DVecM v k a) = MDVecM (V.Mutable v) s k (Mut s a)
+type instance Cst s (DVecM v k a) = MDVecM (V.Mutable v) s k (Cst s a)
+type instance KeyOf (DVecM v k) = KeyOf (VecM v k)
+type instance SizeOf (DVecM v k) = SizeOf (VecM v k)
+type instance ValOf (DVecM v k a) = a
+type instance KeyOf (DVecM v k a) = KeyOf (VecM v k a)
+type instance M.SizeOf (DVecM v k a) = M.SizeOf (VecM v k a)
+
 type Vector = Vec VI.Vector Int
 type VectorU = Vec VU.Vector Int
 type VectorS = Vec VS.Vector Int
@@ -77,6 +88,7 @@ type DVectorU = DVec VU.Vector Int
 type DVectorS = DVec VS.Vector Int
 
 type VectorM = VecM VI.Vector Int
+type DVectorM = DVecM VI.Vector Int
 
 -- inherit typeclasses -- need to find some automated deriving mechanism
 instance (NFData (v a)) => NFData (Vec v k a) where
@@ -284,6 +296,9 @@ instance (mv ~ V.Mutable v, VM.MVector mv a) => M.WriteM (DVec v k a) where
 instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => M.WriteMM (VecM v k a) where
     writeMM (MVecM mv) = VM.unsafeWrite mv
     {-# INLINE writeMM #-}
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => M.WriteMM (DVecM v k a) where
+    writeMM (MDVecM vl) k a = readMutV vl >>= \l -> VM.unsafeWrite l k a
+    {-# INLINE writeMM #-}
 instance (mv ~ V.Mutable v, VM.MVector mv a) => M.ReadC (Vec v k a) where
     readC (MVec mv) = VM.unsafeRead mv
     {-# INLINE readC #-}
@@ -293,9 +308,16 @@ instance (mv ~ V.Mutable v, VM.MVector mv a) => M.ReadC (DVec v k a) where
 instance (mv ~ V.Mutable v, forall b . VM.MVector mv b, MutToCst a) => M.ReadCC (VecM v k a) where
     readCC (MVecM mv) = VM.unsafeRead mv
     {-# INLINE readCC #-}
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => M.ReadCC (DVecM v k a) where
+    readCC (MDVecM vl) k = readMutV vl >>= \l -> VM.unsafeRead l k
+    {-# INLINE readCC #-}
 instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => M.ReadMM (VecM v k a) where
     readMM (MVecM mv) = VM.unsafeRead mv
     {-# INLINE readMM #-}
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => M.ReadMM (DVecM v k a) where
+    readMM (MDVecM vl) k = readMutV vl >>= \l -> VM.unsafeRead l k
+    {-# INLINE readMM #-}
+
 
 instance (V.Vector v a) => M.Convert (Vec v k a) (v a) where
     convert (Vec v) = v
