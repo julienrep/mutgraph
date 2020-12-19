@@ -21,10 +21,10 @@ type instance KeyOf (Heap h z) = KeyOf h
 type instance ValOf (Heap h z) = ValOf h
 type instance SizeOf (Heap h z) = z
 
-class MakeHeapM h q z k a where
+class MakeHeapM h q z a where
     makeHeapM :: (MutMonad s m, k ~ KeyOf h, a ~ ValOf h) =>
         Mut s h -> z -> m (Mut s q)
-instance MakeHeapM h (Heap h z) z k a where
+instance MakeHeapM h (Heap h z) z a where
     makeHeapM h z = newMutV z >>= \zVar -> return (Heap (h, zVar))
 
 type instance SizeOf (Heap h z) = z

@@ -6,13 +6,13 @@ module MutGraph.GraphSearch (
     edgeNop,
 ) where
 import Prelude
-import MutContainers.Bi.Map
+import MutContainers.Mono.Map
 import MutState.State
 import MutGraph.Graph
 --
 import Control.Monad hiding (replicateM)
-import MutContainers.Bi.Container
-import MutContainers.Bi.List
+import MutContainers.Mono.Container
+import MutContainers.Mo.List
 import MutContainers.Any.Map
 import MutContainers.Any.Size
 
@@ -24,26 +24,28 @@ edgeNop :: (MutMonad s m) => edge -> m ()
 edgeNop = const $ return ()
 
 class DfsM g colors where
-    dfsM :: (MutMonad s m, GraphReqs g k h e l z, k ~ KeyOf colors) =>
+    dfsM :: (MutMonad s m, GraphReqs g k h e l z, 
+        k ~ KeyOf colors, ValOf colors ~ VisitStatus) =>
         (k -> m ()) -> (k -> m ())
         -> (Edge g -> m ()) -> (Edge g -> m ())
         -> (Edge g -> m ()) -> (Edge g -> m ())
-        -> Mut s colors VisitStatus -> Mut s g -> k -> m ()
+        -> Mut s colors -> Mut s g -> k -> m ()
 
 class BfsM g colors q where
-    bfsM :: (MutMonad s m, GraphReqs g k h e l z, k ~ KeyOf colors) =>
+    bfsM :: (MutMonad s m, GraphReqs g k h e l z,
+        k ~ KeyOf colors, ValOf colors ~ VisitStatus,
+        ValOf q ~ k) =>
         (k -> m ()) -> (k -> m ())
         -> (Edge g -> m ()) -> (Edge g -> m ())
-        -> Mut s q k -> Mut s colors VisitStatus -> Mut s g -> k -> m ()
+        -> Mut s q -> Mut s colors -> Mut s g -> k -> m ()
 
 instance (
         GraphReqs g k h e l z,
-        KeyOf colors ~ k,
         SizeOf colors ~ z,
-        ReplicateM colors VisitStatus,
-        WriteM colors VisitStatus,
-        ReadC colors VisitStatus,
-        MutToCst2 colors VisitStatus,
+        ReplicateM colors,
+        WriteM colors,
+        ReadC colors,
+        MutToCst colors,
         Foldable l,
         ListGraphNodesC g,
         ListGraphEdgesFromC g,
@@ -58,7 +60,7 @@ instance (
                 listGraphEdgesFromC (cst graph) u >>=
                     mapM_  (\edge -> do
                     let v = getEdgeHead edge
-                    status <- readC (c2 colors) v
+                    status <- readC (cst colors) v
                     case status of
                         Unvisited -> do
                             preEdge edge
@@ -73,17 +75,16 @@ instance (
 
 instance (
         GraphReqs g k h e l z,
-        KeyOf colors ~ k,
         SizeOf colors ~ z,
-        WriteM colors VisitStatus,
-        ReadC colors VisitStatus,
-        ReplicateM colors VisitStatus,
-        MutToCst2 colors VisitStatus,
-        EmptyM q k,
-        IsEmptyC q k,
-        PushBackM q k,
-        PopFrontM q k,
-        MutToCst2 q k,
+        WriteM colors,
+        ReadC colors,
+        ReplicateM colors,
+        MutToCst colors,
+        EmptyM q,
+        IsEmptyC q,
+        PushBackM q,
+        PopFrontM q,
+        MutToCst q,
         Foldable l,
         ListGraphNodesC g,
         ListGraphEdgesFromC g,
@@ -96,14 +97,14 @@ instance (
         writeM colors _u Visiting
         loop where
             loop = do
-                empty <- isEmptyC (c2 queue)
+                empty <- isEmptyC (cst queue)
                 unless empty $ do
                     u <- popFrontM queue
                     preNode u
                     listGraphEdgesFromC (cst graph) u >>=
                         mapM_ (\edge -> do
                             let v = getEdgeHead edge
-                            status <- readC (c2 colors) v
+                            status <- readC (cst colors) v
                             case status of
                                 Unvisited -> do
                                     ascEdge edge

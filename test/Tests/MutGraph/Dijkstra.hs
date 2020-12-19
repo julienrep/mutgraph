@@ -21,7 +21,7 @@ import MutContainers.Curry
 import MutContainers.Run
 import MutContainers.Vector
 import MutContainers.Unbox
-import MutContainers.Bi.List
+import MutContainers.Mo.List
 
 dputs :: String -> IO ()
 dputs = putStr
@@ -47,7 +47,7 @@ dijkstraFormatInputsM (list, source) = do
     return inputs
 dijkstraRunM :: (MutMonad s IO) => 
     (Mut s (GGG Int), Int)
-    -> IO (VectorU Int)
+    -> IO (Vector Int)
 dijkstraRunM inputs = do
     evaluate (rnf inputs)
     dputs $ "Dijkstra running on graph..." ++ lr
@@ -58,7 +58,7 @@ dijkstraRunM inputs = do
     let dt :: Double = fromIntegral (t2-t1) * 1e-12
     dputs $ "Dijkstra ran in " ++ show dt ++ " s" ++ lr
     return outputs
-dijkstraFormatOutputsM :: VectorU Int -> IO [Int]
+dijkstraFormatOutputsM :: Vector Int -> IO [Int]
 dijkstraFormatOutputsM = return . map (\x -> if x < maxBound then x else 0) . toList
 
 testDijkstraFromFile :: Test

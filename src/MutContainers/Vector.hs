@@ -5,7 +5,6 @@ module MutContainers.Vector (
 )
 where
 import Prelude
-import qualified Prelude as P
 import Control.Monad
 import Control.DeepSeq
 import MutState.State
@@ -15,7 +14,6 @@ import qualified MutContainers.Bi.Size as B
 import qualified MutContainers.Bi.List as B
 import qualified MutContainers.Mono.Container as M
 import qualified MutContainers.Mono.Map as M
--- import qualified MutContainers.Mono.List as M
 import qualified MutContainers.Mono.Size as M
 import MutContainers.Mo.List
 import qualified Data.Vector.Generic           as V
@@ -231,12 +229,6 @@ instance (V.Vector v a) => B.GetSize (DVec v k) a where
     getSize (DVec v) = V.length v
     {-# INLINE getSize #-}
 
-instance (mv ~ V.Mutable v, VM.MVector mv a) => B.ReplicateM (Vec v k) a where
-    replicateM n x = MVec <$> VM.replicateM n x
-    {-# INLINE replicateM #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a) => B.ReplicateM (DVec v k) a where
-    replicateM n v = MDVec <$> (VM.replicateM n v >>= newMutV)
-    {-# INLINE replicateM #-}
 instance (mv ~ V.Mutable v, VM.MVector mv a) => B.MakeNewM (Vec v k) a where
     makeNewM = MVec <$> VM.new 0
     {-# INLINE makeNewM #-}
@@ -454,3 +446,11 @@ instance (forall b . V.Vector v b) => ToList (Vec v k) where
 instance (forall b . V.Vector v b) => FromList (Vec v k) where
     fromList = Vec . V.fromList
     {-# INLINE fromList #-}
+
+
+instance (mv ~ V.Mutable v, VM.MVector mv a) => ReplicateM (Vec v k a) where
+    replicateM n x = MVec <$> VM.replicateM n x
+    {-# INLINE replicateM #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => ReplicateM (DVec v k a) where
+    replicateM n v = MDVec <$> (VM.replicateM n v >>= newMutV)
+    {-# INLINE replicateM #-}
