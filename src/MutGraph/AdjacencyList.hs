@@ -1,8 +1,8 @@
-module MutGraph.AdjacencyList1 (
+module MutGraph.AdjacencyList (
     AdjList,
     AdjLst,
 ) where
-import Prelude (Num(..), (.), (<$>), ($))
+import Prelude (Num(..), Enum, (.), (<$>), ($))
 import Data.Foldable hiding (concat)
 import Data.Traversable
 import Data.Ord
@@ -13,8 +13,7 @@ import MutGraph.Graph
 import MutContainers.Mono.Container
 import MutContainers.Mono.Map
 import MutContainers.Mono.Size
-import MutContainers.Mono.List
-import qualified MutContainers.Bi.List as B
+import MutContainers.Mo.List
 import MutState.State
 import MutContainers.Any.Map
 import MutContainers.Any.Size
@@ -32,8 +31,6 @@ type instance EdgeKeyOf (AdjList l i w v k e) =
 type instance EdgeValueOf (AdjList l i w v k e) = e
 type instance GraphListOf (AdjList l i w v k e) = l
 type instance GraphSizeOf (AdjList l i w v k e) = k
-
--- type instance ValOf (AdjList l i w v k e) = w
 
 type instance Mut s (AdjList l i w v k e) = 
     AdjList l i (Mut s w) (Mut s v) k e
@@ -53,16 +50,16 @@ type AdjListReqs g k h e l z i w v = (
     ReadAt w,
     ReadAt v,
     Num k,
-    k ~ ValOf (l k),
-    EnumFromTo (l k),
+    Enum k,
+    EnumFromTo l,
     h ~ (k, i),
     Num i,
     GetSize v,
     Convert v (l (k, e)),
-    B.Map l ((k, e), h) (Edge g),
-    B.Map l i h,
-    B.Zip l (k, e) h,
-    B.EnumFromTo l i
+    Convert (l (k, e)) v,
+    Map l,
+    Zip l,
+    Enum i
     )
 
 type MutAdjListReqs g k h e l z i w v = (
@@ -109,8 +106,8 @@ instance (AdjListReqs g k h e l z i w v, GetGraphNodeCount g) =>
 instance (AdjListReqs g k h e l z i w v) =>
     ListGraphEdgesFrom (AdjList l i w v k e) where
     listGraphEdgesFrom (AdjList w) u =
-            B.map (\((k, e), h) -> Edge (u, k, e, h))
-            (B.zip lv (B.map (u,) (B.enumFromTo 0 n)))
+            map (\((k, e), h) -> Edge (u, k, e, h))
+            (zip lv (map (u,) (enumFromTo 0 n)))
         where
         v = w `at` u
         n = getSize v - 1
@@ -154,8 +151,8 @@ instance (MutAdjListReqs g k h e l z i w v) =>
         v <- ufreezeC mv
         let n = getSize v - 1
         let lv = convert v
-        return  (B.map (\((k, e), h) -> Edge (u, k, e, h))
-                (B.zip lv (B.map (u,) (B.enumFromTo 0 n))))
+        return  (map (\((k, e), h) -> Edge (u, k, e, h))
+                (zip lv (map (u,) (enumFromTo 0 n))))
     {-# INLINE listGraphEdgesFromC #-}
 
 instance (MutAdjListReqs g k h e l z i w v, Traversable l, Monad l) => 
@@ -163,8 +160,9 @@ instance (MutAdjListReqs g k h e l z i w v, Traversable l, Monad l) =>
 
 instance (MutAdjListReqs g k h e l z i w v, Ord k,
     EnsureSizeM (SizeViaNodes g),
-    Concat v,
-    Replicate v,
+    Concat l,
+    Replicate l,
+    SizeOf l ~ k,
     MutToCst w,
     MutToCst v
     ) => AddGraphEdgeM (AdjList l i w v k e) where
@@ -173,10 +171,15 @@ instance (MutAdjListReqs g k h e l z i w v, Ord k,
         let (AdjList w) = graph
         v <- readMM w u
         h <- (u,) <$> getSizeC (cst v)
-        fv <- ufreezeC (cst v)
-        nv <- uthawM (concat fv (replicate 1 (u', e)))
+        cv <- ufreezeC (cst v)
+        nv <- uthawM (addNewEdge cv)
         writeMM w u nv
         return h
+        where
+            addNewEdge v = convert v2
+                where
+                    v2 = concat v1 (replicate 1 (u', e))
+                    v1 = convert v :: l (k, e)
     {-# INLINE addGraphEdgeM #-}
 
 instance (MutAdjListReqs g k h e l z i w v) =>

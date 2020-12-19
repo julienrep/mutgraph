@@ -22,7 +22,7 @@ source-repository head
 library
   exposed-modules:
       MutGraph.Graph
-      MutGraph.AdjacencyList1
+      MutGraph.AdjacencyList
       MutGraph.AdjacencyList2
       MutGraph.Dijkstra
       MutGraph.GraphSearch
@@ -42,10 +42,10 @@ library
       MutContainers.Bi.Heap
       MutContainers.Mono.Container
       MutContainers.Mono.Size
-      MutContainers.Mono.List
       MutContainers.Mono.Map
       MutContainers.Mono.PriorityQueue
       MutContainers.Mono.Heap
+      MutContainers.Mo.List
       MutState.State
       Tests
       Tests.MutGraph.Dijkstra

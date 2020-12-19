@@ -14,7 +14,7 @@ import Control.Monad
 import Control.Monad.Primitive
 import MutState.State
 import MutGraph.Graph
-import MutGraph.AdjacencyList1
+import MutGraph.AdjacencyList
 import MutGraph.Dijkstra
 import MutGraph.Parser
 import MutContainers.Curry
