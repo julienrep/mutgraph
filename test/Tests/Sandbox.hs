@@ -35,8 +35,8 @@ test1 = TestCase $ do
   dputs lr
   dputs $ "Hello world" ++ lr
 
-  l :: Mut _ Vector Int <- replicateM 5 (return 3)
-  ll :: Mut _ Vector (Mut _ Vector Int) <- replicateM 2 (return l)
+  l :: Mut _ (Vector Int) <- replicateM 5 (return 3)
+  ll :: Mut _ (Vector (Mut _ (Vector Int))) <- replicateM 2 (return l)
 
   dputs "l = "
   listToStringM (return . show) l >>= dputs

@@ -9,16 +9,13 @@ module MutGraph.Dijkstra (
 import Prelude 
 import MutGraph.Graph
 import MutState.State
----
 import Control.Monad hiding (replicateM)
 import MutContainers.PriorityQueue
 import MutContainers.Container
----
 import Control.Monad.ST
 import MutContainers.List
 import MutContainers.Vector
 import MutContainers.Unbox
-import MutContainers.Container
 import MutContainers.Run
 import MutContainers.Curry
 import MutContainers.Heap

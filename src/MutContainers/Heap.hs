@@ -12,8 +12,8 @@ import MutContainers.Size
 import MutState.State
 
 newtype Heap h z = Heap (h, z)
-type instance Mut s (Heap h z) = Heap ( (Mut s h)) (Mut s (Var z))
-type instance Cst s (Heap h z) = Heap ( (Cst s h)) (Cst s (Var z))
+type instance Mut s (Heap h z) = Heap (Mut s h) (Mut s (Var z))
+type instance Cst s (Heap h z) = Heap (Cst s h) (Cst s (Var z))
 
 type instance KeyOf (Heap h z) = KeyOf h
 type instance ValOf (Heap h z) = ValOf h
@@ -23,14 +23,14 @@ class MakeHeapM h q z a where
     makeHeapM :: (MutMonad s m, k ~ KeyOf h, a ~ ValOf h) =>
         Mut s h -> z -> m (Mut s q)
 instance MakeHeapM h (Heap h z) z a where
-    makeHeapM h z = newMutV z >>= \zVar -> return (Heap (h, zVar))
+    makeHeapM h z = newVar z >>= \zVar -> return (Heap (h, zVar))
 
 type instance SizeOf (Heap h z) = z
 instance () => GetSizeC (Heap h z) where
-    getSizeC (Heap (_, z)) = readMutV z
+    getSizeC (Heap (_, z)) = readVar z
     {-# INLINE getSizeC #-}
 instance () => ModifySizeM (Heap h z) where
-    modifySizeM (Heap (_, z)) = modifyMutV z
+    modifySizeM (Heap (_, z)) = modifyVar z
     {-# INLINE modifySizeM #-}
 
 instance (WriteM h) => WriteM (Heap h z) where

@@ -23,10 +23,6 @@ import qualified Data.Vector.Storable          as VS
 
 newtype Vec (v :: * -> *) (k :: *) (a :: *) = Vec (v a)
 newtype MVec (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = MVec (mv s a)
-type instance Mut s (Vec v) = MVec (V.Mutable v) s
-type instance Cst s (Vec v) = MVec (V.Mutable v) s
-type instance Mut s (Vec v k) = MVec (V.Mutable v) s k
-type instance Cst s (Vec v k) = MVec (V.Mutable v) s k
 type instance Mut s (Vec v k a) = MVec (V.Mutable v) s k a
 type instance Cst s (Vec v k a) = MVec (V.Mutable v) s k a
 type instance KeyOf (Vec v) = Int
@@ -40,10 +36,6 @@ type instance SizeOf (Vec v k a) = SizeOf (Vec v k)
 newtype DVec (v :: * -> *) (k :: *) (a :: *) = DVec (v a)
 newtype MDVec (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = 
     MDVec (Mut s (Var (mv s a)))
-type instance Mut s (DVec v) = MDVec (V.Mutable v) s
-type instance Cst s (DVec v) = MDVec (V.Mutable v) s
-type instance Mut s (DVec v k) = MDVec (V.Mutable v) s k
-type instance Cst s (DVec v k) = MDVec (V.Mutable v) s k
 type instance Mut s (DVec v k a) = MDVec (V.Mutable v) s k a
 type instance Cst s (DVec v k a) = MDVec (V.Mutable v) s k a
 type instance KeyOf (DVec v) = KeyOf (Vec v)
@@ -138,7 +130,7 @@ instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ KeyOf (Vec v)) => WriteM (Vec v
     writeM (MVec mv) = VM.unsafeWrite mv
     {-# INLINE writeM #-}
 instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ KeyOf (Vec v)) => WriteM (DVec v k a) where
-    writeM (MDVec vl) k a = readMutV vl >>= \l -> VM.unsafeWrite l k a
+    writeM (MDVec vl) k a = readVar vl >>= \l -> VM.unsafeWrite l k a
     {-# INLINE writeM #-}
 instance (forall b . WriteM (Vec v k b)) => WriteMM (VecM v k a) where
     writeMM (MVecM mv) = writeM (MVec mv)
@@ -150,7 +142,7 @@ instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ KeyOf (Vec v)) => ReadC (Vec v 
     readC (MVec mv) = VM.unsafeRead mv
     {-# INLINE readC #-}
 instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ KeyOf (Vec v)) => ReadC (DVec v k a) where
-    readC (MDVec vl) k = readMutV vl >>= \l -> VM.unsafeRead l k
+    readC (MDVec vl) k = readVar vl >>= \l -> VM.unsafeRead l k
     {-# INLINE readC #-}
 instance (forall b . ReadC (Vec v k b)) => ReadCC (VecM v k a) where
     readCC (MVecM mv) = readC (MVec mv)
@@ -191,18 +183,18 @@ instance (mv ~ V.Mutable v, VM.MVector mv a) => GetSizeC (Vec v k a) where
     getSizeC (MVec mv) = return (VM.length mv)
     {-# INLINE getSizeC #-}
 instance (mv ~ V.Mutable v, VM.MVector mv a) => GetSizeC (DVec v k a) where
-    getSizeC (MDVec vl) = readMutV vl >>= \l -> return (VM.length l)
+    getSizeC (MDVec vl) = readVar vl >>= \l -> return (VM.length l)
     {-# INLINE getSizeC #-}
 instance (mv ~ V.Mutable v, VM.MVector mv a) => GrowSizeM (DVec v k a) where
-    growSizeM (MDVec vl) n = readMutV vl >>= flip VM.unsafeGrow n >>= writeMutV vl
+    growSizeM (MDVec vl) n = readVar vl >>= flip VM.unsafeGrow n >>= writeVar vl
     {-# INLINE growSizeM #-}
 instance (mv ~ V.Mutable v, VM.MVector mv a) => ShrinkSizeM (DVec v k a) where
-    shrinkSizeM (MDVec vl) n = readMutV vl >>= \l -> writeMutV vl (VM.unsafeSlice 0 n l)
+    shrinkSizeM (MDVec vl) n = readVar vl >>= \l -> writeVar vl (VM.unsafeSlice 0 n l)
     {-# INLINE shrinkSizeM #-}
 instance (mv ~ V.Mutable v, VM.MVector mv a) => ModifySizeM (DVec v k a) where
     modifySizeM x f = do
         let MDVec vl = x
-        size <- readMutV vl >>= \l -> return (VM.length l)
+        size <- readVar vl >>= \l -> return (VM.length l)
         let diff = f size - size
         if diff > 0 then growSizeM x diff
         else when (diff < 0) $ shrinkSizeM x (-diff)
@@ -211,7 +203,7 @@ instance (mv ~ V.Mutable v, VM.MVector mv a) => SetSizeM (DVec v k a)
 instance (mv ~ V.Mutable v, VM.MVector mv a) => EnsureSizeM (DVec v k a) where
     ensureSizeM x z = do
         let MDVec vl = x
-        size <- readMutV vl >>= \l -> return (VM.length l)
+        size <- readVar vl >>= \l -> return (VM.length l)
         let diff = z - size
         when (diff > 0) $ growSizeM x diff
     {-# INLINE ensureSizeM #-}
@@ -258,7 +250,7 @@ instance (mv ~ V.Mutable v, VM.MVector mv a) => MakeNewM (Vec v k a) where
     makeNewM = MVec <$> VM.new 0
     {-# INLINE makeNewM #-}
 instance (mv ~ V.Mutable v, VM.MVector mv a) => MakeNewM (DVec v k a) where
-    makeNewM = MDVec <$> (VM.new 0 >>= newMutV)
+    makeNewM = MDVec <$> (VM.new 0 >>= newVar)
     {-# INLINE makeNewM #-}
 instance (forall b . V.Vector v b, UThawM (VecM v k a)) => MakeNewM (VecM v k a) where
     makeNewM = uthawM (VecM V.empty)
@@ -270,37 +262,37 @@ instance (V.Vector v a) => FreezeC (Vec v k a) where
     freezeC (MVec mv) = Vec <$> V.freeze mv
     {-# INLINE freezeC #-}
 instance (V.Vector v a) => FreezeC (DVec v k a) where
-    freezeC (MDVec vl) = DVec <$> (readMutV vl >>= V.freeze)
+    freezeC (MDVec vl) = DVec <$> (readVar vl >>= V.freeze)
     {-# INLINE freezeC #-}
 instance (V.Vector v a) => UFreezeC (Vec v k a) where
     ufreezeC (MVec mv) = Vec <$> V.unsafeFreeze mv
     {-# INLINE ufreezeC #-}
 instance (V.Vector v a) => UFreezeC (DVec v k a) where
-    ufreezeC (MDVec vl) = DVec <$> (readMutV vl >>= V.unsafeFreeze)
+    ufreezeC (MDVec vl) = DVec <$> (readVar vl >>= V.unsafeFreeze)
     {-# INLINE ufreezeC #-}
 instance (forall b . V.Vector v b, UFreezeC a) => UFreezeC (VecM v k a) where
     ufreezeC (MVecM mv) = VecM <$> (V.unsafeFreeze mv >>= V.mapM ufreezeC) -- O(n)
     {-# INLINE ufreezeC #-}
 instance (forall b . V.Vector v b, UFreezeC a) => UFreezeC (DVecM v k a) where
-    ufreezeC (MDVecM mv) = DVecM <$> (readMutV mv >>= V.unsafeFreeze >>= V.mapM ufreezeC) -- O(n)
+    ufreezeC (MDVecM mv) = DVecM <$> (readVar mv >>= V.unsafeFreeze >>= V.mapM ufreezeC) -- O(n)
     {-# INLINE ufreezeC #-}
 instance (V.Vector v a) => ThawM (Vec v k a) where
     thawM (Vec v) = MVec <$> V.thaw v
     {-# INLINE thawM #-}
 instance (V.Vector v a) => ThawM (DVec v k a) where
-    thawM (DVec l) = MDVec <$> (V.thaw l >>= newMutV)
+    thawM (DVec l) = MDVec <$> (V.thaw l >>= newVar)
     {-# INLINE thawM #-}
 instance (V.Vector v a) => UThawM (Vec v k a) where
     uthawM (Vec v) = MVec <$> V.unsafeThaw v
     {-# INLINE uthawM #-}
 instance (V.Vector v a) => UThawM (DVec v k a) where
-    uthawM (DVec l) = MDVec <$> (V.unsafeThaw l >>= newMutV)
+    uthawM (DVec l) = MDVec <$> (V.unsafeThaw l >>= newVar)
     {-# INLINE uthawM #-}
 instance (forall b . V.Vector v b, UThawM a) => UThawM (VecM v k a) where
     uthawM (VecM mv) = MVecM <$> (V.mapM uthawM mv >>= V.unsafeThaw) -- O(n)
     {-# INLINE uthawM #-}
 instance (forall b . V.Vector v b, UThawM a) => UThawM (DVecM v k a) where
-    uthawM (DVecM mv) = MDVecM <$> (V.mapM uthawM mv >>= V.unsafeThaw >>= newMutV) -- O(n)
+    uthawM (DVecM mv) = MDVecM <$> (V.mapM uthawM mv >>= V.unsafeThaw >>= newVar) -- O(n)
     {-# INLINE uthawM #-}
 
 
@@ -334,9 +326,8 @@ instance (mv ~ V.Mutable v, VM.MVector mv a) => ReplicateM (Vec v k a) where
     replicateM n x = MVec <$> VM.replicateM n x
     {-# INLINE replicateM #-}
 instance (mv ~ V.Mutable v, VM.MVector mv a) => ReplicateM (DVec v k a) where
-    replicateM n v = MDVec <$> (VM.replicateM n v >>= newMutV)
+    replicateM n v = MDVec <$> (VM.replicateM n v >>= newVar)
     {-# INLINE replicateM #-}
-
 
 
 -- mono-traversable support

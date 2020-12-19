@@ -8,7 +8,6 @@ module MutGraph.GraphSearch (
 import Prelude
 import MutState.State
 import MutGraph.Graph
---
 import Control.Monad hiding (replicateM)
 import MutContainers.Container
 import MutContainers.List
