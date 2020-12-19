@@ -8,23 +8,22 @@ module MutGraph.Dijkstra (
 ) where
 import Prelude 
 import MutGraph.Graph
-import MutContainers.Mono.Map
 import MutState.State
 ---
 import Control.Monad hiding (replicateM)
-import MutContainers.Mono.PriorityQueue
-import MutContainers.Mono.Container
+import MutContainers.PriorityQueue
+import MutContainers.Container
 ---
 import Control.Monad.ST
-import MutContainers.Mo.List
+import MutContainers.List
 import MutContainers.Vector
 import MutContainers.Unbox
-import qualified MutContainers.Mono.Container as M
+import MutContainers.Container
 import MutContainers.Run
 import MutContainers.Curry
-import MutContainers.Mono.Heap
-import MutContainers.Any.Map
-import MutContainers.Any.Size
+import MutContainers.Heap
+import MutContainers.Map
+import MutContainers.Size
 
 class Dijkstra g where
     dijkstra :: (GraphReqs g k h e l z, Num e, Ord e) =>
@@ -158,7 +157,7 @@ type GenOutputsM s m l e = l e
 
 instance (
     GraphReqs g k h e l z,
-    M.UThawM g,
+    UThawM g,
     DijkstraSimpleM g,
     MutToCst g
     ) => Dijkstra g where
@@ -169,7 +168,7 @@ instance (
             formatInputsM :: (MutMonad s m) =>
                 GenInputs g k h e l z -> m (GenInputsM s m g k h e l z)
             formatInputsM (graph, source) = do
-                mgraph <- M.uthawM graph
+                mgraph <- uthawM graph
                 return (cst mgraph, source)
             runAlgoM :: (MutMonad s m) =>
                 GenInputsM s m g k h e l z -> m (GenOutputsM s m l e)

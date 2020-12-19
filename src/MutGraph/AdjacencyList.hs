@@ -10,13 +10,11 @@ import Control.Monad
 import Control.Monad.ST
 import Control.DeepSeq
 import MutGraph.Graph
-import MutContainers.Mono.Container
-import MutContainers.Mono.Map
-import MutContainers.Mono.Size
-import MutContainers.Mo.List
+import MutContainers.Container
+import MutContainers.Map
+import MutContainers.Size
+import MutContainers.List
 import MutState.State
-import MutContainers.Any.Map
-import MutContainers.Any.Size
 
 type AdjLst 
     (l :: * -> *) (i :: *) (w :: * -> *) (v :: * -> *) (k :: *) (e :: *) = 

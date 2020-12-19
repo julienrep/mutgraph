@@ -8,14 +8,10 @@ import Prelude
 import Control.Monad
 import Control.DeepSeq
 import MutState.State
-import qualified MutContainers.Bi.Container as B
-import qualified MutContainers.Bi.Map as B
-import qualified MutContainers.Bi.Size as B
-import qualified MutContainers.Bi.List as B
-import qualified MutContainers.Mono.Container as M
-import qualified MutContainers.Mono.Map as M
-import qualified MutContainers.Mono.Size as M
-import MutContainers.Mo.List
+import MutContainers.Container
+import MutContainers.Map
+import MutContainers.Size
+import MutContainers.List
 import qualified Data.Vector.Generic           as V
 import qualified Data.Vector.Generic.Mutable   as VM
 import qualified Data.Vector                   as VI
@@ -24,8 +20,6 @@ import qualified Data.Vector.Storable          as VS
 -- import qualified Data.Vector.Mutable           as VMI
 -- import qualified Data.Vector.Unboxed.Mutable   as VMU
 -- import qualified Data.Vector.Storable.Mutable  as VMS
-import MutContainers.Any.Map
-import MutContainers.Any.Size
 
 newtype Vec (v :: * -> *) (k :: *) (a :: *) = Vec (v a)
 newtype MVec (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = MVec (mv s a)
@@ -138,292 +132,180 @@ instance (Monoid (v a)) => Monoid (Vec v k a) where
 
 -- Vector
 
--- bi kinded imports
+-- Map
 
-instance (M.WriteM (Vec v k a)) => B.WriteM (Vec v k) a where
-    writeM = M.writeM
+instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ KeyOf (Vec v)) => WriteM (Vec v k a) where
+    writeM (MVec mv) = VM.unsafeWrite mv
     {-# INLINE writeM #-}
-instance (M.WriteM (DVec v k a)) => B.WriteM (DVec v k) a where
-    writeM = M.writeM
+instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ KeyOf (Vec v)) => WriteM (DVec v k a) where
+    writeM (MDVec vl) k a = readMutV vl >>= \l -> VM.unsafeWrite l k a
     {-# INLINE writeM #-}
-instance (M.ReadC (Vec v k a)) => B.ReadC (Vec v k) a where
-    readC = M.readC
+instance (forall b . WriteM (Vec v k b)) => WriteMM (VecM v k a) where
+    writeMM (MVecM mv) = writeM (MVec mv)
+    {-# INLINE writeMM #-}
+instance (forall b . WriteM (DVec v k b)) => WriteMM (DVecM v k a) where
+    writeMM (MDVecM mv) = writeM (MDVec mv)
+    {-# INLINE writeMM #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ KeyOf (Vec v)) => ReadC (Vec v k a) where
+    readC (MVec mv) = VM.unsafeRead mv
     {-# INLINE readC #-}
-instance (M.ReadC (DVec v k a)) => B.ReadC (DVec v k) a where
-    readC = M.readC
+instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ KeyOf (Vec v)) => ReadC (DVec v k a) where
+    readC (MDVec vl) k = readMutV vl >>= \l -> VM.unsafeRead l k
     {-# INLINE readC #-}
-instance (M.ReadAt (Vec v k a)) => B.ReadAt (Vec v k) a where
-    at = M.at
+instance (forall b . ReadC (Vec v k b)) => ReadCC (VecM v k a) where
+    readCC (MVecM mv) = readC (MVec mv)
+    {-# INLINE readCC #-}
+instance (forall b . ReadC (DVec v k b)) => ReadCC (DVecM v k a) where
+    readCC (MDVecM mv) = readC (MDVec mv)
+    {-# INLINE readCC #-}
+instance (forall b . ReadC (Vec v k b)) => ReadMM (VecM v k a) where
+    readMM (MVecM mv) = readC (MVec mv)
+    {-# INLINE readMM #-}
+instance (forall b . ReadC (DVec v k b)) => ReadMM (DVecM v k a) where
+    readMM (MDVecM mv) = readC (MDVec mv)
+    {-# INLINE readMM #-}
+instance (V.Vector v a, k ~ KeyOf (Vec v)) => ReadAt (Vec v k a) where
+    at (Vec v) = (V.!) v
     {-# INLINE at #-}
-instance (M.ReadAt (DVec v k a)) => B.ReadAt (DVec v k) a where
-    at = M.at
+instance (V.Vector v a, k ~ KeyOf (Vec v)) => ReadAt (DVec v k a) where
+    (DVec v) `at` u = v V.! u
+    {-# INLINE at #-}
+instance (ReadAt (Vec v k a)) => ReadAt (VecM v k a) where
+    at (VecM v) = at (Vec v)
+    {-# INLINE at #-}
+instance (ReadAt (DVec v k a)) => ReadAt (DVecM v k a) where
+    at (DVecM v) = at (DVec v)
     {-# INLINE at #-}
 
-instance (V.Vector v a) => B.FreezeC (Vec v k) a where
-    freezeC (MVec mv) = Vec <$> V.freeze mv
-    {-# INLINE freezeC #-}
-instance (V.Vector v a) => B.FreezeC (DVec v k) a where
-    freezeC (MDVec vl) = DVec <$> (readMutV vl >>= V.freeze)
-    {-# INLINE freezeC #-}
-instance (V.Vector v a) => B.UFreezeC (Vec v k) a where
-    ufreezeC (MVec mv) = Vec <$> V.unsafeFreeze mv
-    {-# INLINE ufreezeC #-}
-instance (V.Vector v a) => B.UFreezeC (DVec v k) a where
-    ufreezeC (MDVec vl) = DVec <$> (readMutV vl >>= V.unsafeFreeze)
-    {-# INLINE ufreezeC #-}
-instance (V.Vector v a) => B.ThawM (Vec v k) a where
-    thawM (Vec v) = MVec <$> V.thaw v
-    {-# INLINE thawM #-}
-instance (V.Vector v a) => B.ThawM (DVec v k) a where
-    thawM (DVec l) = MDVec <$> (V.thaw l >>= newMutV)
-    {-# INLINE thawM #-}
-instance (V.Vector v a) => B.UThawM (Vec v k) a where
-    uthawM (Vec v) = MVec <$> V.unsafeThaw v
-    {-# INLINE uthawM #-}
-instance (V.Vector v a) => B.UThawM (DVec v k) a where
-    uthawM (DVec l) = MDVec <$> (V.unsafeThaw l >>= newMutV)
-    {-# INLINE uthawM #-}
 
-instance (V.Vector v a) => B.Convert (Vec v k) v a where
-    convert (Vec v) = v
-    {-# INLINE convert #-}
-instance (V.Vector v a) => B.Convert v (Vec v k) a where
-    convert = Vec
-    {-# INLINE convert #-}
-instance (V.Vector v a, V.Vector w a) => B.Convert (Vec v k) (Vec w k) a where
-    convert (Vec v) = Vec (V.convert v)
-    {-# INLINE convert #-}
+--  Size
 
-instance (V.Vector v a, V.Vector v b, V.Vector v (a, b)) => B.Zip (Vec v k) a b where
-    zip (Vec v) (Vec v') = Vec (V.zip v v')
-    {-# INLINE zip #-}
-instance (V.Vector v a, V.Vector v b) => B.Map (Vec v k) a b where
-    map f (Vec v) = Vec (V.map f v)
-    {-# INLINE map #-}
-instance (V.Vector v Int) => B.EnumFromTo (Vec v k) Int where
-    enumFromTo a b = Vec $ V.enumFromN a (b - a + 1)
-    {-# INLINE enumFromTo #-}
-instance (V.Vector v a) => B.Concat (Vec v k) a where
-    concat (Vec v) (Vec v') = Vec $ V.concat [v, v']
-    {-# INLINE concat #-}
-instance (V.Vector v a) => B.Replicate (Vec v k) a where
-    replicate n x = Vec $ V.replicate n x
-    {-# INLINE replicate #-}
-instance (V.Vector v a) => B.ToList (Vec v k) a where
-    toList (Vec v) = V.toList v
-    {-# INLINE toList #-}
-instance (V.Vector v a) => B.FromList (Vec v k) a where
-    fromList = Vec . V.fromList
-    {-# INLINE fromList #-}
 
-instance (V.Vector v a) => B.MakeNew (Vec v k) a where
-    makeNew = Vec V.empty
-    {-# INLINE makeNew #-}
-instance (V.Vector v a) => B.MakeNew (DVec v k) a where
-    makeNew = DVec V.empty
-    {-# INLINE makeNew #-}
-instance (V.Vector v a) => B.GetSize (Vec v k) a where
+instance (V.Vector v a) => GetSize (Vec v k a) where
     getSize (Vec v) = V.length v
     {-# INLINE getSize #-}
-instance (V.Vector v a) => B.GetSize (DVec v k) a where
+instance (V.Vector v a) => GetSize (DVec v k a) where
     getSize (DVec v) = V.length v
     {-# INLINE getSize #-}
-
-instance (mv ~ V.Mutable v, VM.MVector mv a) => B.MakeNewM (Vec v k) a where
-    makeNewM = MVec <$> VM.new 0
-    {-# INLINE makeNewM #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a) => B.MakeNewM (DVec v k) a where
-    makeNewM = MDVec <$> (VM.new 0 >>= newMutV)
-    {-# INLINE makeNewM #-}
-
-instance (mv ~ V.Mutable v, VM.MVector mv a) => B.GetSizeC (Vec v k) a where
+instance (mv ~ V.Mutable v, VM.MVector mv a) => GetSizeC (Vec v k a) where
     getSizeC (MVec mv) = return (VM.length mv)
     {-# INLINE getSizeC #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a) => B.GetSizeC (DVec v k) a where
+instance (mv ~ V.Mutable v, VM.MVector mv a) => GetSizeC (DVec v k a) where
     getSizeC (MDVec vl) = readMutV vl >>= \l -> return (VM.length l)
     {-# INLINE getSizeC #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a) => B.GrowSizeM (DVec v k) a where
+instance (mv ~ V.Mutable v, VM.MVector mv a) => GrowSizeM (DVec v k a) where
     growSizeM (MDVec vl) n = readMutV vl >>= flip VM.unsafeGrow n >>= writeMutV vl
     {-# INLINE growSizeM #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a) => B.ShrinkSizeM (DVec v k) a where
+instance (mv ~ V.Mutable v, VM.MVector mv a) => ShrinkSizeM (DVec v k a) where
     shrinkSizeM (MDVec vl) n = readMutV vl >>= \l -> writeMutV vl (VM.unsafeSlice 0 n l)
     {-# INLINE shrinkSizeM #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a) => B.ModifySizeM (DVec v k) a where
+instance (mv ~ V.Mutable v, VM.MVector mv a) => ModifySizeM (DVec v k a) where
     modifySizeM x f = do
         let MDVec vl = x
         size <- readMutV vl >>= \l -> return (VM.length l)
         let diff = f size - size
-        if diff > 0 then B.growSizeM x diff
-        else when (diff < 0) $ B.shrinkSizeM x (-diff)
+        if diff > 0 then growSizeM x diff
+        else when (diff < 0) $ shrinkSizeM x (-diff)
     {-# INLINE modifySizeM #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a) => B.SetSizeM (DVec v k) a
-instance (mv ~ V.Mutable v, VM.MVector mv a) => B.EnsureSizeM (DVec v k) a where
+instance (mv ~ V.Mutable v, VM.MVector mv a) => SetSizeM (DVec v k a)
+instance (mv ~ V.Mutable v, VM.MVector mv a) => EnsureSizeM (DVec v k a) where
     ensureSizeM x z = do
         let MDVec vl = x
         size <- readMutV vl >>= \l -> return (VM.length l)
         let diff = z - size
-        when (diff > 0) $ B.growSizeM x diff
+        when (diff > 0) $ growSizeM x diff
     {-# INLINE ensureSizeM #-}
 
-
- 
--- mono kinded imports
-instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ KeyOf (Vec v)) => M.WriteM (Vec v k a) where
-    writeM (MVec mv) = VM.unsafeWrite mv
-    {-# INLINE writeM #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ KeyOf (Vec v)) => M.WriteM (DVec v k a) where
-    writeM (MDVec vl) k a = readMutV vl >>= \l -> VM.unsafeWrite l k a
-    {-# INLINE writeM #-}
-instance (forall b . M.WriteM (Vec v k b)) => M.WriteMM (VecM v k a) where
-    writeMM (MVecM mv) = M.writeM (MVec mv)
-    {-# INLINE writeMM #-}
-instance (forall b . M.WriteM (DVec v k b)) => M.WriteMM (DVecM v k a) where
-    writeMM (MDVecM mv) = M.writeM (MDVec mv)
-    {-# INLINE writeMM #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ KeyOf (Vec v)) => M.ReadC (Vec v k a) where
-    readC (MVec mv) = VM.unsafeRead mv
-    {-# INLINE readC #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ KeyOf (Vec v)) => M.ReadC (DVec v k a) where
-    readC (MDVec vl) k = readMutV vl >>= \l -> VM.unsafeRead l k
-    {-# INLINE readC #-}
-instance (forall b . M.ReadC (Vec v k b)) => M.ReadCC (VecM v k a) where
-    readCC (MVecM mv) = M.readC (MVec mv)
-    {-# INLINE readCC #-}
-instance (forall b . M.ReadC (DVec v k b)) => M.ReadCC (DVecM v k a) where
-    readCC (MDVecM mv) = M.readC (MDVec mv)
-    {-# INLINE readCC #-}
-instance (forall b . M.ReadC (Vec v k b)) => M.ReadMM (VecM v k a) where
-    readMM (MVecM mv) = M.readC (MVec mv)
-    {-# INLINE readMM #-}
-instance (forall b . M.ReadC (DVec v k b)) => M.ReadMM (DVecM v k a) where
-    readMM (MDVecM mv) = M.readC (MDVec mv)
-    {-# INLINE readMM #-}
-instance (V.Vector v a, k ~ KeyOf (Vec v)) => M.ReadAt (Vec v k a) where
-    at (Vec v) = (V.!) v
-    {-# INLINE at #-}
-instance (V.Vector v a, k ~ KeyOf (Vec v)) => M.ReadAt (DVec v k a) where
-    (DVec v) `at` u = v V.! u
-    {-# INLINE at #-}
-instance (M.ReadAt (Vec v k a)) => M.ReadAt (VecM v k a) where
-    at (VecM v) = M.at (Vec v)
-    {-# INLINE at #-}
-instance (M.ReadAt (DVec v k a)) => M.ReadAt (DVecM v k a) where
-    at (DVecM v) = M.at (DVec v)
-    {-# INLINE at #-}
-
-instance (B.GetSizeC (Vec v k) a) => M.GetSizeC (Vec v k a) where
-    getSizeC = B.getSizeC
-instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => M.GetSizeC (VecM v k a) where
-    getSizeC (MVecM mv) = M.getSizeC (MVec mv)
-instance (B.GetSizeC (DVec v k) a) => M.GetSizeC (DVec v k a) where
-    getSizeC = B.getSizeC
-instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => M.GetSizeC (DVecM v k a) where
-    getSizeC (MDVecM mv) = M.getSizeC (MDVec mv)
-instance (B.GrowSizeM (DVec v k) a) => M.GrowSizeM (DVec v k a) where
-    growSizeM = B.growSizeM
-instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => M.GrowSizeM (DVecM v k a) where
-    growSizeM (MDVecM mv) = M.growSizeM (MDVec mv)
-instance (B.ShrinkSizeM (DVec v k) a) => M.ShrinkSizeM (DVec v k a) where
-    shrinkSizeM = B.shrinkSizeM
-instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => M.ShrinkSizeM (DVecM v k a) where
-    shrinkSizeM (MDVecM mv) = M.shrinkSizeM (MDVec mv)
-instance (B.ModifySizeM (DVec v k) a) => M.ModifySizeM (DVec v k a) where
-    modifySizeM = B.modifySizeM
-instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => M.ModifySizeM (DVecM v k a) where
-    modifySizeM (MDVecM mv) = M.modifySizeM (MDVec mv)
-instance (B.SetSizeM (DVec v k) a) => M.SetSizeM (DVec v k a) where
-    setSizeM = B.setSizeM
-instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => M.SetSizeM (DVecM v k a) where
-    setSizeM (MDVecM mv) = M.setSizeM (MDVec mv)
-instance (B.EnsureSizeM (DVec v k) a) => M.EnsureSizeM (DVec v k a) where
-    ensureSizeM = B.ensureSizeM
-instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => M.EnsureSizeM (DVecM v k a) where
-    ensureSizeM (MDVecM mv) = M.ensureSizeM (MDVec mv)
-
-instance (B.FreezeC (Vec v k) a) => M.FreezeC (Vec v k a) where
-    freezeC = B.freezeC
-instance (B.FreezeC (DVec v k) a) => M.FreezeC (DVec v k a) where
-    freezeC = B.freezeC
-instance (B.UFreezeC (Vec v k) a) => M.UFreezeC (Vec v k a) where
-    ufreezeC = B.ufreezeC
-instance (B.UFreezeC (DVec v k) a) => M.UFreezeC (DVec v k a) where
-    ufreezeC = B.ufreezeC
-instance (forall b . V.Vector v b, M.UFreezeC a) => M.UFreezeC (VecM v k a) where
-    ufreezeC (MVecM mv) = VecM <$> (V.unsafeFreeze mv >>= V.mapM M.ufreezeC) -- O(n)
-instance (forall b . V.Vector v b, M.UFreezeC a) => M.UFreezeC (DVecM v k a) where
-    ufreezeC (MDVecM mv) = DVecM <$> (readMutV mv >>= V.unsafeFreeze >>= V.mapM M.ufreezeC) -- O(n)
-instance (B.ThawM (Vec v k) a) => M.ThawM (Vec v k a) where
-    thawM = B.thawM
-instance (B.ThawM (DVec v k) a) => M.ThawM (DVec v k a) where
-    thawM = B.thawM
-instance (B.UThawM (Vec v k) a) => M.UThawM (Vec v k a) where
-    uthawM = B.uthawM
-instance (B.UThawM (DVec v k) a) => M.UThawM (DVec v k a) where
-    uthawM = B.uthawM
-instance (forall b . V.Vector v b, M.UThawM a) => M.UThawM (VecM v k a) where
-    uthawM (VecM mv) = MVecM <$> (V.mapM M.uthawM mv >>= V.unsafeThaw) -- O(n)
-instance (forall b . V.Vector v b, M.UThawM a) => M.UThawM (DVecM v k a) where
-    uthawM (DVecM mv) = MDVecM <$> (V.mapM M.uthawM mv >>= V.unsafeThaw >>= newMutV) -- O(n)
-instance (B.MakeNewM (Vec v k) a) => M.MakeNewM (Vec v k a) where
-    makeNewM = B.makeNewM
-instance (B.MakeNewM (DVec v k) a) => M.MakeNewM (DVec v k a) where
-    makeNewM = B.makeNewM
-instance (forall b . V.Vector v b, M.UThawM (VecM v k a)) => M.MakeNewM (VecM v k a) where
-    makeNewM = M.uthawM (VecM V.empty)
-instance (forall b . V.Vector v b, M.UThawM (DVecM v k a)) => M.MakeNewM (DVecM v k a) where
-    makeNewM = M.uthawM (DVecM V.empty)
-
-instance (B.Convert (Vec v k) v a) => M.Convert (Vec v k a) (v a) where
-    convert = B.convert
-instance (B.Convert v (Vec v k) a) => M.Convert (v a) (Vec v k a) where
-    convert = B.convert
-instance (B.Convert (Vec v k) (Vec w k) a) => M.Convert (Vec v k a) (Vec w k a) where
-    convert = B.convert
-
--- instance (B.EnumFromTo (Vec v k) Int) => M.EnumFromTo (Vec v k Int) where
---     enumFromTo = B.enumFromTo
--- instance (B.Concat (Vec v k) a) => M.Concat (Vec v k a) where
---     concat = B.concat
--- instance (B.Replicate (Vec v k) a) => M.Replicate (Vec v k a) where
---     replicate = B.replicate
-instance (B.MakeNew (Vec v k) a) => M.MakeNew (Vec v k a) where
-    makeNew = B.makeNew
-instance (B.MakeNew (DVec v k) a) => M.MakeNew (DVec v k a) where
-    makeNew = B.makeNew
-instance (B.GetSize (Vec v k) a) => M.GetSize (Vec v k a) where
-    getSize = B.getSize
-instance (B.GetSize (DVec v k) a) => M.GetSize (DVec v k a) where
-    getSize = B.getSize
-instance (V.Vector v a) => M.GetSize (VecM v k a) where
-    getSize (VecM v) = M.getSize (Vec v)
-instance (V.Vector v a) => M.GetSize (DVecM v k a) where
-    getSize (DVecM v) = M.getSize (DVec v)
+instance (V.Vector v a) => GetSize (VecM v k a) where
+    getSize (VecM v) = getSize (Vec v)
+instance (V.Vector v a) => GetSize (DVecM v k a) where
+    getSize (DVecM v) = getSize (DVec v)
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => GetSizeC (VecM v k a) where
+    getSizeC (MVecM mv) = getSizeC (MVec mv)
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => GetSizeC (DVecM v k a) where
+    getSizeC (MDVecM mv) = getSizeC (MDVec mv)
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => GrowSizeM (DVecM v k a) where
+    growSizeM (MDVecM mv) = growSizeM (MDVec mv)
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => ShrinkSizeM (DVecM v k a) where
+    shrinkSizeM (MDVecM mv) = shrinkSizeM (MDVec mv)
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => ModifySizeM (DVecM v k a) where
+    modifySizeM (MDVecM mv) = modifySizeM (MDVec mv)
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => SetSizeM (DVecM v k a) where
+    setSizeM (MDVecM mv) = setSizeM (MDVec mv)
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => EnsureSizeM (DVecM v k a) where
+    ensureSizeM (MDVecM mv) = ensureSizeM (MDVec mv)
 
 
--- mono-traversable support
--- type instance Element (Vec v k a) = a
--- type instance Element (DVec v a) = a
--- instance (MonoFunctor (v a), Element (v a) ~ a) => MonoFunctor ((Vec v k) a) where
---     omap f (Vec l) = Vec (omap f l)
---     {-# inline omap #-}
--- instance (MonoFunctor (v a), Element (v a) ~ a) => MonoFunctor ((DVec v) a) where
---     omap f (DVec l) = DVec (omap f l)
---     {-# inline omap #-}
--- instance (MonoFoldable (v a), Element (v a) ~ a) => MonoFoldable ((Vec v k) a) where
---     ofoldMap f (Vec l) = ofoldMap f l
---     {-# INLINE ofoldMap #-}
---     ofoldr f z (Vec l) = ofoldr f z l
---     {-# INLINE ofoldr #-}
---     ofoldl' x b (Vec l) = ofoldl' x b l
---     {-# INLINE ofoldl' #-}
---     ofoldr1Ex x (Vec l) = ofoldr1Ex x l
---     {-# INLINE ofoldr1Ex #-}
---     ofoldl1Ex' x (Vec l) = ofoldl1Ex' x l
---     {-# INLINE ofoldl1Ex' #-}
--- instance (MonoTraversable (v a), Element (v a) ~ a) => MonoTraversable ((Vec v k) a) where
---     otraverse f (Vec l) = fmap Vec (otraverse f l)
---     {-# INLINE otraverse #-}
+-- Container
 
+instance (V.Vector v a) => MakeNew (Vec v k a) where
+    makeNew = Vec V.empty
+    {-# INLINE makeNew #-}
+instance (V.Vector v a) => MakeNew (DVec v k a) where
+    makeNew = DVec V.empty
+    {-# INLINE makeNew #-}
+instance (V.Vector v a) => Convert (Vec v k a) (v a) where
+    convert (Vec v) = v
+    {-# INLINE convert #-}
+instance (V.Vector v a) => Convert (v a) (Vec v k a) where
+    convert = Vec
+    {-# INLINE convert #-}
+instance (V.Vector v a, V.Vector w a) => Convert (Vec v k a) (Vec w k a) where
+    convert (Vec v) = Vec (V.convert v)
+    {-# INLINE convert #-}
+
+instance (mv ~ V.Mutable v, VM.MVector mv a) => MakeNewM (Vec v k a) where
+    makeNewM = MVec <$> VM.new 0
+    {-# INLINE makeNewM #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => MakeNewM (DVec v k a) where
+    makeNewM = MDVec <$> (VM.new 0 >>= newMutV)
+    {-# INLINE makeNewM #-}
+instance (forall b . V.Vector v b, UThawM (VecM v k a)) => MakeNewM (VecM v k a) where
+    makeNewM = uthawM (VecM V.empty)
+    {-# INLINE makeNewM #-}
+instance (forall b . V.Vector v b, UThawM (DVecM v k a)) => MakeNewM (DVecM v k a) where
+    makeNewM = uthawM (DVecM V.empty)
+    {-# INLINE makeNewM #-}
+instance (V.Vector v a) => FreezeC (Vec v k a) where
+    freezeC (MVec mv) = Vec <$> V.freeze mv
+    {-# INLINE freezeC #-}
+instance (V.Vector v a) => FreezeC (DVec v k a) where
+    freezeC (MDVec vl) = DVec <$> (readMutV vl >>= V.freeze)
+    {-# INLINE freezeC #-}
+instance (V.Vector v a) => UFreezeC (Vec v k a) where
+    ufreezeC (MVec mv) = Vec <$> V.unsafeFreeze mv
+    {-# INLINE ufreezeC #-}
+instance (V.Vector v a) => UFreezeC (DVec v k a) where
+    ufreezeC (MDVec vl) = DVec <$> (readMutV vl >>= V.unsafeFreeze)
+    {-# INLINE ufreezeC #-}
+instance (forall b . V.Vector v b, UFreezeC a) => UFreezeC (VecM v k a) where
+    ufreezeC (MVecM mv) = VecM <$> (V.unsafeFreeze mv >>= V.mapM ufreezeC) -- O(n)
+    {-# INLINE ufreezeC #-}
+instance (forall b . V.Vector v b, UFreezeC a) => UFreezeC (DVecM v k a) where
+    ufreezeC (MDVecM mv) = DVecM <$> (readMutV mv >>= V.unsafeFreeze >>= V.mapM ufreezeC) -- O(n)
+    {-# INLINE ufreezeC #-}
+instance (V.Vector v a) => ThawM (Vec v k a) where
+    thawM (Vec v) = MVec <$> V.thaw v
+    {-# INLINE thawM #-}
+instance (V.Vector v a) => ThawM (DVec v k a) where
+    thawM (DVec l) = MDVec <$> (V.thaw l >>= newMutV)
+    {-# INLINE thawM #-}
+instance (V.Vector v a) => UThawM (Vec v k a) where
+    uthawM (Vec v) = MVec <$> V.unsafeThaw v
+    {-# INLINE uthawM #-}
+instance (V.Vector v a) => UThawM (DVec v k a) where
+    uthawM (DVec l) = MDVec <$> (V.unsafeThaw l >>= newMutV)
+    {-# INLINE uthawM #-}
+instance (forall b . V.Vector v b, UThawM a) => UThawM (VecM v k a) where
+    uthawM (VecM mv) = MVecM <$> (V.mapM uthawM mv >>= V.unsafeThaw) -- O(n)
+    {-# INLINE uthawM #-}
+instance (forall b . V.Vector v b, UThawM a) => UThawM (DVecM v k a) where
+    uthawM (DVecM mv) = MDVecM <$> (V.mapM uthawM mv >>= V.unsafeThaw >>= newMutV) -- O(n)
+    {-# INLINE uthawM #-}
+
+
+
+-- List
 
 instance (forall b . V.Vector v b) => Zip (Vec v k) where
     zip (Vec v) (Vec v') = Vec (V.zip v v')
@@ -454,3 +336,29 @@ instance (mv ~ V.Mutable v, VM.MVector mv a) => ReplicateM (Vec v k a) where
 instance (mv ~ V.Mutable v, VM.MVector mv a) => ReplicateM (DVec v k a) where
     replicateM n v = MDVec <$> (VM.replicateM n v >>= newMutV)
     {-# INLINE replicateM #-}
+
+
+
+-- mono-traversable support
+-- type instance Element (Vec v k a) = a
+-- type instance Element (DVec v a) = a
+-- instance (MonoFunctor (v a), Element (v a) ~ a) => MonoFunctor ((Vec v k) a) where
+--     omap f (Vec l) = Vec (omap f l)
+--     {-# inline omap #-}
+-- instance (MonoFunctor (v a), Element (v a) ~ a) => MonoFunctor ((DVec v) a) where
+--     omap f (DVec l) = DVec (omap f l)
+--     {-# inline omap #-}
+-- instance (MonoFoldable (v a), Element (v a) ~ a) => MonoFoldable ((Vec v k) a) where
+--     ofoldMap f (Vec l) = ofoldMap f l
+--     {-# INLINE ofoldMap #-}
+--     ofoldr f z (Vec l) = ofoldr f z l
+--     {-# INLINE ofoldr #-}
+--     ofoldl' x b (Vec l) = ofoldl' x b l
+--     {-# INLINE ofoldl' #-}
+--     ofoldr1Ex x (Vec l) = ofoldr1Ex x l
+--     {-# INLINE ofoldr1Ex #-}
+--     ofoldl1Ex' x (Vec l) = ofoldl1Ex' x l
+--     {-# INLINE ofoldl1Ex' #-}
+-- instance (MonoTraversable (v a), Element (v a) ~ a) => MonoTraversable ((Vec v k) a) where
+--     otraverse f (Vec l) = fmap Vec (otraverse f l)
+--     {-# INLINE otraverse #-}

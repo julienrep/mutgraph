@@ -1,4 +1,5 @@
-module MutContainers.Mono.Map (
+module MutContainers.Map (
+        KeyOf, ValOf,
         WriteM(..),
         WriteMM(..),
         WriteMC(..),
@@ -12,7 +13,9 @@ where
 import Prelude ((<$>))
 import Control.Monad (Monad(..))
 import MutState.State
-import MutContainers.Any.Map
+
+type family KeyOf (l :: k) :: *
+type family ValOf (l :: k) :: *
 
 type instance ValOf [a] = a
 

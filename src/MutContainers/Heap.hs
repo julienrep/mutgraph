@@ -1,17 +1,15 @@
-module MutContainers.Mono.Heap (
+module MutContainers.Heap (
     Heap, MakeHeapM(..),
 )
 where
 import Prelude (Bounded(..), Num(..), Ord(..), Integral(..), Eq(..), ($), (<$>), const)
 import Data.Bool
 import Control.Monad
-import MutContainers.Mono.PriorityQueue
-import MutContainers.Mono.Map
-import MutContainers.Mono.Container
-import MutContainers.Mono.Size
+import MutContainers.PriorityQueue
+import MutContainers.Map
+import MutContainers.Container
+import MutContainers.Size
 import MutState.State
-import MutContainers.Any.Map
-import MutContainers.Any.Size
 
 newtype Heap h z = Heap (h, z)
 type instance Mut s (Heap h z) = Heap ( (Mut s h)) (Mut s (Var z))

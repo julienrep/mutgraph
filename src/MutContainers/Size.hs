@@ -1,4 +1,5 @@
-module MutContainers.Mono.Size (
+module MutContainers.Size (
+    SizeOf,
     GetSize(..),
     GetSizeC(..),
     GrowSizeM(..),
@@ -10,8 +11,8 @@ module MutContainers.Mono.Size (
 import Prelude
 import Control.Monad
 import MutState.State
-import MutContainers.Any.Size
 
+type family SizeOf (l :: k) :: *
 
 class GetSize x where
     getSize :: (z ~ SizeOf x) => x -> z

@@ -1,4 +1,4 @@
-module MutContainers.Mo.List
+module MutContainers.List
   ( Zip (..),
     Map (..),
     EnumFromTo (..),
@@ -14,11 +14,11 @@ module MutContainers.Mo.List
   )
 where
 
-import MutContainers.Any.Map
-import MutContainers.Any.Size
 import MutState.State
 import qualified Prelude
 import Prelude (Enum)
+import MutContainers.Map
+import MutContainers.Size
 
 class Zip (l :: * -> *) where zip :: l a -> l b -> l (a, b)
 

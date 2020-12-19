@@ -21,7 +21,7 @@ import MutContainers.Curry
 import MutContainers.Run
 import MutContainers.Vector
 import MutContainers.Unbox
-import MutContainers.Mo.List
+import MutContainers.List
 
 dputs :: String -> IO ()
 dputs = putStr

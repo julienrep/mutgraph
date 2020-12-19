@@ -6,15 +6,14 @@ module MutGraph.GraphSearch (
     edgeNop,
 ) where
 import Prelude
-import MutContainers.Mono.Map
 import MutState.State
 import MutGraph.Graph
 --
 import Control.Monad hiding (replicateM)
-import MutContainers.Mono.Container
-import MutContainers.Mo.List
-import MutContainers.Any.Map
-import MutContainers.Any.Size
+import MutContainers.Container
+import MutContainers.List
+import MutContainers.Map
+import MutContainers.Size
 
 data VisitStatus = Unvisited | Visiting | Visited
 

@@ -1,6 +1,7 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 module Tests.Sandbox
   ( tests,
@@ -8,12 +9,10 @@ module Tests.Sandbox
 where
 
 import Control.Monad hiding (replicateM)
-import MutContainers.Any.Map
-import MutContainers.Any.Size
-import MutContainers.Bi.Container
-import MutContainers.Mono.Map
-import MutContainers.Mono.Size (GetSizeC (..))
-import MutContainers.Mo.List hiding (enumFromTo)
+import MutContainers.Container
+import MutContainers.Map
+import MutContainers.Size
+import MutContainers.List hiding (enumFromTo)
 import MutContainers.Vector
 import MutState.State
 import Test.HUnit (Test (..), assertEqual)

@@ -23,7 +23,6 @@ library
   exposed-modules:
       MutGraph.Graph
       MutGraph.AdjacencyList
-      MutGraph.AdjacencyList2
       MutGraph.Dijkstra
       MutGraph.GraphSearch
       MutGraph.Parser
@@ -31,21 +30,12 @@ library
       MutContainers.Curry
       MutContainers.Vector
       MutContainers.Unbox
-      MutContainers.Any.Map
-      MutContainers.Any.Size
-      MutContainers.Tri.Map
-      MutContainers.Bi.Container
-      MutContainers.Bi.Size
-      MutContainers.Bi.List
-      MutContainers.Bi.Map
-      MutContainers.Bi.PriorityQueue
-      MutContainers.Bi.Heap
-      MutContainers.Mono.Container
-      MutContainers.Mono.Size
-      MutContainers.Mono.Map
-      MutContainers.Mono.PriorityQueue
-      MutContainers.Mono.Heap
-      MutContainers.Mo.List
+      MutContainers.Container
+      MutContainers.Size
+      MutContainers.Map
+      MutContainers.PriorityQueue
+      MutContainers.Heap
+      MutContainers.List
       MutState.State
       Tests
       Tests.MutGraph.Dijkstra
