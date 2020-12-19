@@ -302,6 +302,9 @@ instance (forall b . V.Vector v b, UThawM a) => UThawM (DVecM v k a) where
 instance (forall b . V.Vector v b) => Zip (Vec v k) where
     zip (Vec v) (Vec v') = Vec (V.zip v v')
     {-# INLINE zip #-}
+instance (forall b . V.Vector v b) => ZipWith (Vec v k) where
+    zipWith f (Vec v) (Vec v') = Vec (V.zipWith f v v')
+    {-# INLINE zipWith #-}
 instance (forall b . V.Vector v b) => Map (Vec v k) where
     map f (Vec v) = Vec (V.map f v)
     {-# INLINE map #-}

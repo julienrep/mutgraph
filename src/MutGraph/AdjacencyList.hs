@@ -38,44 +38,43 @@ type instance Cst s (AdjList l i w v k e) =
 type AdjListReqs g k h e l z i w v = (
     g ~ AdjList l i w v k e,
     GraphReqs g k h e l z,
-    KeyOf w ~ k,
-    ValOf w ~ v,
-    SizeOf w ~ z,
     KeyOf v ~ i,
     ValOf v ~ (k, e),
     SizeOf v ~ i,
+    KeyOf w ~ k,
+    ValOf w ~ v,
+    SizeOf w ~ z,
     GetSize w,
     ReadAt w,
     ReadAt v,
-    Num k,
-    Enum k,
-    EnumFromTo l,
-    h ~ (k, i),
-    Num i,
     GetSize v,
     Convert v (l (k, e)),
     Convert (l (k, e)) v,
-    Map l,
-    Zip l,
-    Enum i
+    Num k,
+    Enum k,
+    Num i,
+    Enum i,
+    h ~ (k, i),
+    Functor l,
+    Foldable l,
+    ZipWith l,
+    EnumFromTo l
     )
 
 type MutAdjListReqs g k h e l z i w v = (
     AdjListReqs g k h e l z i w v,
+    ReadC v,
+    WriteM v,
+    GetSizeC v,
+    UFreezeC v,
+    UThawM v,
+    MakeNewM v,
     GetSizeC w,
     ReadCC w,
     ReadMM w,
-    ReadC v,
-    WriteM v,
     WriteMM w,
-    GetSizeC v,
-    GrowSizeM w,
-    ShrinkSizeM w,
-    SetSizeM w,
-    UFreezeC v,
     UFreezeC w,
-    UThawM v,
-    MakeNewM v,
+    UThawM w,
     MakeNewM w
     )
 
@@ -103,13 +102,13 @@ instance (AdjListReqs g k h e l z i w v, GetGraphNodeCount g) =>
 
 instance (AdjListReqs g k h e l z i w v) =>
     ListGraphEdgesFrom (AdjList l i w v k e) where
-    listGraphEdgesFrom (AdjList w) u =
-            map (\((k, e), h) -> Edge (u, k, e, h))
-            (zip lv (map (u,) (enumFromTo 0 n)))
-        where
-        v = w `at` u
-        n = getSize v - 1
+    listGraphEdgesFrom (AdjList w) u = zipWith f lv lh where
+        f (k, e) h = Edge (u, k, e, h)
         lv = convert v
+        v = w `at` u
+        lh = fmap (u,) ln
+        ln = enumFromTo 0 n
+        n = getSize v - 1
     {-# INLINE listGraphEdgesFrom #-}
 
 instance (AdjListReqs g k h e l z i w v, Monad l) => 
@@ -147,10 +146,13 @@ instance (MutAdjListReqs g k h e l z i w v) =>
     listGraphEdgesFromC (AdjList w) u = do
         mv <- readCC w u
         v <- ufreezeC mv
-        let n = getSize v - 1
-        let lv = convert v
-        return  (map (\((k, e), h) -> Edge (u, k, e, h))
-                (zip lv (map (u,) (enumFromTo 0 n))))
+        return $ getListFromVector v where
+            getListFromVector v = zipWith f lv lh where
+                f (k, e) h = Edge (u, k, e, h)
+                n = getSize v - 1
+                lv = convert v
+                ln = enumFromTo 0 n
+                lh = fmap (u,) ln
     {-# INLINE listGraphEdgesFromC #-}
 
 instance (MutAdjListReqs g k h e l z i w v, Traversable l, Monad l) => 
@@ -160,7 +162,7 @@ instance (MutAdjListReqs g k h e l z i w v, Ord k,
     EnsureSizeM (SizeViaNodes g),
     Concat l,
     Replicate l,
-    SizeOf l ~ k,
+    Num (SizeOf l),
     MutToCst w,
     MutToCst v
     ) => AddGraphEdgeM (AdjList l i w v k e) where
@@ -170,19 +172,19 @@ instance (MutAdjListReqs g k h e l z i w v, Ord k,
         v <- readMM w u
         h <- (u,) <$> getSizeC (cst v)
         cv <- ufreezeC (cst v)
-        nv <- uthawM (addNewEdge cv)
+        nv <- uthawM (append cv (u', e))
         writeMM w u nv
         return h
         where
-            addNewEdge v = convert v2
-                where
-                    v2 = concat v1 (replicate 1 (u', e))
-                    v1 = convert v :: l (k, e)
+        append v x = convert v2
+            where
+            v2 = concat v1 (replicate 1 x)
+            v1 = convert v :: l (k, e)
     {-# INLINE addGraphEdgeM #-}
 
 instance (MutAdjListReqs g k h e l z i w v) =>
     MakeNewM (AdjList l i w v k e) where
-    makeNewM = makeNewM >>= (return . AdjList)
+    makeNewM = AdjList <$> makeNewM
     {-# INLINE makeNewM #-}
 
 instance (MutAdjListReqs g k h e l z i w v, MakeNewM (AdjList l i w v k e)) =>
@@ -193,9 +195,7 @@ instance (MutAdjListReqs g k h e l z i w v, MakeNewM (AdjList l i w v k e)) =>
 instance (MutAdjListReqs g k h e l z i w v, AddGraphEdgeM g) =>
     MakeGraphFromEdgesM (AdjList l i w v k e) list
 
-instance (MutAdjListReqs g k h e l z i w v,
-    UThawM w
-    ) => UThawM (AdjList l i w v k e) where
+instance (MutAdjListReqs g k h e l z i w v) => UThawM (AdjList l i w v k e) where
     uthawM (AdjList w) = AdjList <$> uthawM w
     {-# INLINE uthawM #-}
 
@@ -237,7 +237,7 @@ instance (MutAdjListReqs g k h e l z i w v,
     {-# INLINE getSizeC #-}
 
 instance (MutAdjListReqs g k h e l z i w v,
-    Foldable l,
+    GrowSizeM w,
     MutToCst (SizeViaNodes g)
     ) => GrowSizeM (SizeViaNodes (AdjList l i w v k e)) where
     growSizeM graph addedCount = do
@@ -248,17 +248,18 @@ instance (MutAdjListReqs g k h e l z i w v,
         mapM_ (\k -> makeNewM >>= \v -> writeMM mw k v) l
     {-# INLINE growSizeM #-}
 
-instance (MutAdjListReqs g k h e l z i w v) =>
+instance (MutAdjListReqs g k h e l z i w v, ShrinkSizeM w) =>
     ShrinkSizeM (SizeViaNodes (AdjList l i w v k e)) where
     shrinkSizeM (SizeViaNodes (AdjList mw)) = shrinkSizeM mw
     {-# INLINE shrinkSizeM #-}
 
 instance (MutAdjListReqs g k h e l z i w v, Ord k,
-    Foldable l,
+    ShrinkSizeM w,
+    GrowSizeM w,
     MutToCst (SizeViaNodes g)
     ) => ModifySizeM (SizeViaNodes (AdjList l i w v k e))
 
 instance (MutAdjListReqs g k h e l z i w v, Ord k,
-    Foldable l,
+    GrowSizeM w,
     MutToCst (SizeViaNodes g)
     ) => EnsureSizeM (SizeViaNodes (AdjList l i w v k e))

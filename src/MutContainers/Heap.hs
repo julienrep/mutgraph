@@ -1,5 +1,5 @@
 module MutContainers.Heap (
-    Heap, MakeHeapM(..),
+    Heap(..), MakeHeapM(..),
 )
 where
 import Prelude (Bounded(..), Num(..), Ord(..), Integral(..), Eq(..), ($), (<$>), const)
@@ -11,33 +11,31 @@ import MutContainers.Container
 import MutContainers.Size
 import MutState.State
 
-newtype Heap h z = Heap (h, z)
-type instance Mut s (Heap h z) = Heap (Mut s h) (Mut s (Var z))
-type instance Cst s (Heap h z) = Heap (Cst s h) (Cst s (Var z))
+newtype Heap h = Heap h
+type instance Mut s (Heap h) = (Mut s h, Mut s (Var (SizeOf (Heap h))))
+type instance Cst s (Heap h) = (Cst s h, Cst s (Var (SizeOf (Heap h))))
+type instance KeyOf (Heap h) = KeyOf h
+type instance ValOf (Heap h) = ValOf h
+type instance SizeOf (Heap h) = KeyOf (Heap h)
 
-type instance KeyOf (Heap h z) = KeyOf h
-type instance ValOf (Heap h z) = ValOf h
-type instance SizeOf (Heap h z) = z
+class MakeHeapM h where
+    makeHeapM :: (MutMonad s m, z ~ SizeOf (Heap h)) =>
+        Mut s h -> z -> m (Mut s (Heap h))
+instance MakeHeapM h where
+    makeHeapM h z = newVar z >>= \zVar -> return (h, zVar)
 
-class MakeHeapM h q z a where
-    makeHeapM :: (MutMonad s m, k ~ KeyOf h, a ~ ValOf h) =>
-        Mut s h -> z -> m (Mut s q)
-instance MakeHeapM h (Heap h z) z a where
-    makeHeapM h z = newVar z >>= \zVar -> return (Heap (h, zVar))
-
-type instance SizeOf (Heap h z) = z
-instance () => GetSizeC (Heap h z) where
-    getSizeC (Heap (_, z)) = readVar z
+instance () => GetSizeC (Heap h) where
+    getSizeC (_, z) = readVar z
     {-# INLINE getSizeC #-}
-instance () => ModifySizeM (Heap h z) where
-    modifySizeM (Heap (_, z)) = modifyVar z
+instance () => ModifySizeM (Heap h) where
+    modifySizeM (_, z) = modifyVar z
     {-# INLINE modifySizeM #-}
 
-instance (WriteM h) => WriteM (Heap h z) where
-    writeM (Heap (h, _)) = writeM h
+instance (WriteM h) => WriteM (Heap h) where
+    writeM (h, _) = writeM h
     {-# INLINE writeM #-}
-instance (ReadC h) => ReadC (Heap h z) where
-    readC (Heap (h, _)) = readC h
+instance (ReadC h) => ReadC (Heap h) where
+    readC (h, _) = readC h
     {-# INLINE readC #-}
 swapM :: forall h k s m. (MutMonad s m, k ~ KeyOf h,
     ReadC h, WriteM h, MutToCst h) =>
@@ -49,23 +47,21 @@ swapM h i j = do
                 writeM h j x
 {-# INLINE swapM #-}
 
-instance (Num z, Ord z) => IsEmptyC (Heap h z) where
+instance (z ~ SizeOf (Heap h), Num z, Ord z) => IsEmptyC (Heap h) where
     isEmptyC heap = (== 0) <$> getSizeC heap
     {-# INLINE isEmptyC #-}
 
-instance (Num z) => EmptyM (Heap h z) where
+instance (z ~ SizeOf (Heap h), Num z) => EmptyM (Heap h) where
     emptyM heap = modifySizeM heap (const 0)
     {-# INLINE emptyM #-}
 
 instance (
-    z ~ k,
-    Num z,
-    q ~ Heap h z,
+    q ~ Heap h,
     k ~ KeyOf q,
     WriteM q, ReadC q,
-    FixHeapProperty q,
+    Integral k,
     MutToCst q
-    ) => InsertValM (Heap h z) where
+    ) => InsertValM (Heap h) where
     insertValM heap value = do
         prevHeapSize <- getSizeC (cst heap)
         modifySizeM heap (+1)
@@ -74,14 +70,14 @@ instance (
     {-# INLINE insertValM #-}
 
 instance (
-    z ~ k,
-    Num z,
-    q ~ Heap h z,
+    q ~ Heap h,
     k ~ KeyOf q,
+    Num k, Ord k,
     WriteM q, ReadC q,
-    MinHeapify q,
+    a ~ ValOf q,
+    Bounded a, Ord a,
     MutToCst q
-    ) => ExtractMinM (Heap h z) where
+    ) => ExtractMinM (Heap h) where
     extractMinM heap = do
         heapSize <- getSizeC (cst heap)
         rootValue <- readC (cst heap) 0
@@ -101,55 +97,50 @@ rightKey :: Num a => a -> a
 rightKey i = 2 * i + 2
 {-# INLINE rightKey #-}
 
-class FixHeapProperty q where
-    fixHeapProperty :: (MutMonad s m, ReadC q, WriteM q, k ~ KeyOf q) =>
-        Mut s q -> k -> m ()
-instance (
+fixHeapProperty :: forall q k a s m. (
+    MutMonad s m,
+    ReadC q, WriteM q,
     k ~ KeyOf q,
     a ~ ValOf q,
     Integral k,
     Ord a,
     MutToCst q
-    ) => FixHeapProperty q where
-    fixHeapProperty heap _k =
-        readC (cst heap) _k >>= loop _k
-        where 
-            loop k v = unless (k == 0) $ do
-                    let pk = parentKey k
-                    pv <- readC (cst heap) pk
-                    unless (pv <= v) $ do
-                        swapM heap pk k
-                        loop pk v
-    {-# INLINE fixHeapProperty #-}
+    ) => Mut s q -> k -> m ()
+fixHeapProperty heap _k =
+    readC (cst heap) _k >>= loop _k where 
+        loop k v = unless (k == 0) $ do
+                let pk = parentKey k
+                pv <- readC (cst heap) pk
+                unless (pv <= v) $ do
+                    swapM heap pk k
+                    loop pk v
+{-# INLINE fixHeapProperty #-}
 
-class MinHeapify q where
-    minHeapify :: (MutMonad s m, ReadC q, WriteM q, k ~ KeyOf q) => 
-        Mut s q -> k -> m ()
-instance (
+minHeapify :: forall q k a s m.
+    (MutMonad s m, 
+    ReadC q, WriteM q,
+    GetSizeC q,
     k ~ KeyOf q,
-    a ~ ValOf q,
     k ~ SizeOf q,
+    a ~ ValOf q,
     Bounded a, Ord a,
     Num k, Ord k,
-    GetSizeC q,
     MutToCst q
-    ) => MinHeapify q where
-    minHeapify heap _k = do
-        n <- getSizeC (cst heap)
-        hk <- readC (cst heap) _k
-        preloop n hk _k
-        where
-        preloop n hk = loop
+    ) => Mut s q -> k -> m ()
+minHeapify heap _k = do
+    n <- getSizeC (cst heap)
+    hk <- readC (cst heap) _k
+    preloop n hk _k where
+    preloop n hk = loop where
+        loop k = do
+            let l = leftKey k
+            let r = rightKey k
+            hl <- if l < n then readC (cst heap) l else return maxBound
+            hr <- if r < n then readC (cst heap) r else return maxBound
+            if hl < hr && hl < hk then swap l
+            else when (hr < hl && hr < hk) $ swap r
             where
-            loop k = do
-                let l = leftKey k
-                let r = rightKey k
-                hl <- if l < n then readC (cst heap) l else return maxBound
-                hr <- if r < n then readC (cst heap) r else return maxBound
-                if hl < hr && hl < hk then swap l
-                else when (hr < hl && hr < hk) $ swap r
-                where
-                swap j = do
-                    swapM heap k j
-                    loop j
-    {-# INLINE minHeapify #-}
+            swap j = do
+                swapM heap k j
+                loop j
+{-# INLINE minHeapify #-}

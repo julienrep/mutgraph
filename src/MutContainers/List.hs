@@ -1,5 +1,6 @@
 module MutContainers.List
   ( Zip (..),
+    ZipWith (..),
     Map (..),
     EnumFromTo (..),
     Concat (..),
@@ -21,6 +22,8 @@ import MutContainers.Map
 import MutContainers.Size
 
 class Zip (l :: * -> *) where zip :: l a -> l b -> l (a, b)
+
+class ZipWith (l :: * -> *) where zipWith :: (a -> b -> c) -> l a -> l b -> l c
 
 class Map (l :: * -> *) where map :: (a -> b) -> l a -> l b
 

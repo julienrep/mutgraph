@@ -177,7 +177,7 @@ instance (
 
 type Scanned = VectorU
 type Labels = VectorU
-type Queue e k = Heap (VectorU (e, k)) Int
+type Queue e k = Heap (VectorU (e, k))
 type QueueVec = VectorU
 
 instance (
@@ -198,7 +198,7 @@ instance (
     ReplicateM labels,
     ReplicateM scanned,
     ReplicateM qvec,
-    MakeHeapM qvec q z (e, k),
+    MakeHeapM qvec,
     DijkstraM g q scanned labels,
     Convert labels (l e),
     MutToCst labels
