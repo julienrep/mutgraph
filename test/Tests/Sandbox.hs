@@ -1,7 +1,7 @@
 {-# LANGUAGE PartialTypeSignatures #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 module Tests.Sandbox
   ( tests,
@@ -10,9 +10,9 @@ where
 
 import Control.Monad hiding (replicateM)
 import MutContainers.Container
+import MutContainers.List hiding (enumFromTo)
 import MutContainers.Map
 import MutContainers.Size
-import MutContainers.List hiding (enumFromTo)
 import MutContainers.Vector
 import MutState.State
 import Test.HUnit (Test (..), assertEqual)
@@ -34,19 +34,11 @@ test1 :: Test
 test1 = TestCase $ do
   dputs lr
   dputs $ "Hello world" ++ lr
-
-  l :: Mut _ (Vector Int) <- replicateM 5 (return 3)
-  ll :: Mut _ (Vector (Mut _ (Vector Int))) <- replicateM 2 (return l)
-
-  dputs "l = "
-  listToStringM (return . show) l >>= dputs
-  dputs lr
-
+  l :: Mut _ (Vector Int Int) <- replicateM 5 (return 3)
+  ll :: Mut _ (Vector Int (Mut _ (Vector Int Int))) <- replicateM 2 (return l)
   dputs "ll = "
   listToStringM (listToStringM (return . show)) ll >>= dputs
   dputs lr
-
-  assertEqual "Check results" (1 :: Int) (1 :: Int)
 
 listToStringM ::
   ( MutMonad s m,

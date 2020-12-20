@@ -17,8 +17,8 @@ import MutContainers.List
 import MutState.State
 
 type AdjLst 
-    (l :: * -> *) (i :: *) (w :: * -> *) (v :: * -> *) (k :: *) (e :: *) = 
-        AdjList l i (w (v (k, e))) (v (k, e)) k e
+    (l :: * -> *) (i :: *) (w :: * -> * -> *) (v :: * -> * -> *) (k :: *) (e :: *) = 
+        AdjList l i (w i (v k (k, e))) (v k (k, e)) k e
 
 newtype AdjList 
     (l :: * -> *) (i :: *) (w :: *) (v :: *) (k :: *) (e :: *) = 

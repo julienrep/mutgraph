@@ -13,7 +13,8 @@ module MutState.State
     Cst,
     MutToCst,
     cst,
-    Var (Var),
+    Var (..),
+    MutV (..),
     readVar,
     writeVar,
     modifyVar,
@@ -30,6 +31,7 @@ import Data.Primitive.MutVar
     readMutVar,
     writeMutVar,
   )
+import Prelude ((<$>))
 
 type MutMonad s m = (PrimMonad m, s ~ PrimState m)
 
@@ -52,24 +54,26 @@ type MutToCst a = forall s. MutToCst1Func s a
 -- below functions are used as wrapper of Data.Primitive.MutVar dependency
 newtype Var x = Var x
 
+newtype MutV s x = MutV (MutVar s x)
+
 -- Var x denotes a type whose mutable version represents a single mutable variable of type x
 
-type instance Mut s (Var x) = MutVar s x
+type instance Mut s (Var x) = MutV s x
 
-type instance Cst s (Var x) = MutVar s x
+type instance Cst s (Var x) = MutV s x
 
 newVar :: (MutMonad s m) => a -> m (Mut s (Var a))
-newVar = newMutVar
+newVar a = MutV <$> newMutVar a
 {-# INLINE newVar #-}
 
 readVar :: (MutMonad s m) => Mut s (Var a) -> m a
-readVar = readMutVar
+readVar (MutV v) = readMutVar v
 {-# INLINE readVar #-}
 
 writeVar :: (MutMonad s m) => Mut s (Var a) -> a -> m ()
-writeVar = writeMutVar
+writeVar (MutV v) = writeMutVar v
 {-# INLINE writeVar #-}
 
 modifyVar :: (MutMonad s m) => Mut s (Var a) -> (a -> a) -> m ()
-modifyVar = modifyMutVar
+modifyVar (MutV v) = modifyMutVar v
 {-# INLINE modifyVar #-}

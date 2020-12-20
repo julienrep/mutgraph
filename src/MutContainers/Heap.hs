@@ -23,6 +23,7 @@ class MakeHeapM h where
         Mut s h -> z -> m (Mut s (Heap h))
 instance MakeHeapM h where
     makeHeapM h z = newVar z >>= \zVar -> return (h, zVar)
+    {-# INLINE makeHeapM #-}
 
 instance () => GetSizeC (Heap h) where
     getSizeC (_, z) = readVar z
@@ -37,9 +38,9 @@ instance (WriteM h) => WriteM (Heap h) where
 instance (ReadC h) => ReadC (Heap h) where
     readC (h, _) = readC h
     {-# INLINE readC #-}
-swapM :: forall h k s m. (MutMonad s m, k ~ KeyOf h,
-    ReadC h, WriteM h, MutToCst h) =>
-    Mut s h -> k -> k -> m ()
+swapM :: forall q k s m. (MutMonad s m, k ~ KeyOf q,
+    ReadC q, WriteM q, MutToCst q) =>
+    Mut s q -> k -> k -> m ()
 swapM h i j = do
                 x <- readC (cst h) i
                 y <- readC (cst h) j

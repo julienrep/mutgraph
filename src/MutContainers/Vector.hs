@@ -71,18 +71,14 @@ type instance ValOf (DVecM v k a) = ValOf (Vec v k a)
 type instance KeyOf (DVecM v k a) = KeyOf (Vec v k a)
 type instance SizeOf (DVecM v k a) = SizeOf (Vec v k a)
 
-type Vector = Vec VI.Vector Int
-type VectorU = Vec VU.Vector Int
-type VectorS = Vec VS.Vector Int
--- type MVector = MVec VMI.MVector Int
--- type MVectorU = MVec VMU.MVector Int
--- type MVectorS = MVec VMS.MVector Int
-type DVector = DVec VI.Vector Int
-type DVectorU = DVec VU.Vector Int
-type DVectorS = DVec VS.Vector Int
-
-type VectorM = VecM VI.Vector Int
-type DVectorM = DVecM VI.Vector Int
+type Vector = Vec VI.Vector
+type VectorU = Vec VU.Vector
+type VectorS = Vec VS.Vector
+type DVector = DVec VI.Vector
+type DVectorU = DVec VU.Vector
+type DVectorS = DVec VS.Vector
+type VectorM = VecM VI.Vector
+type DVectorM = DVecM VI.Vector
 
 -- inherit typeclasses -- need to find some automated deriving mechanism
 instance (NFData (v a)) => NFData (Vec v k a) where rnf (Vec v) = rnf v

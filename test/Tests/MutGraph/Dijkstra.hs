@@ -35,19 +35,19 @@ tests = TestList [
         TestLabel "test1" test1
         ]
 
--- type GGG e = AdjList Vector Int DVector VectorU Int e
-type GGG e = AdjLst Vector Int DVectorM VectorU Int e
+type AdjGraphU e = AdjLst (Vector Int) Int DVectorM VectorU Int e
+type AdjGraph e = AdjLst (Vector Int) Int DVectorM Vector Int e
 
 dijkstraFormatInputsM :: (MutMonad s IO, Foldable list) => 
     (list (Int, Int, Int), Int)
-    -> IO (Mut s (GGG Int), Int)
+    -> IO (Mut s (AdjGraphU Int), Int)
 dijkstraFormatInputsM (list, source) = do
     graph <- makeGraphFromEdgesM list
     let inputs = (graph, source)
     return inputs
 dijkstraRunM :: (MutMonad s IO) => 
-    (Mut s (GGG Int), Int)
-    -> IO (Vector Int)
+    (Mut s (AdjGraphU Int), Int)
+    -> IO (Vector Int Int)
 dijkstraRunM inputs = do
     evaluate (rnf inputs)
     dputs $ "Dijkstra running on graph..." ++ lr
@@ -58,7 +58,7 @@ dijkstraRunM inputs = do
     let dt :: Double = fromIntegral (t2-t1) * 1e-12
     dputs $ "Dijkstra ran in " ++ show dt ++ " s" ++ lr
     return outputs
-dijkstraFormatOutputsM :: Vector Int -> IO [Int]
+dijkstraFormatOutputsM :: Vector Int Int -> IO [Int]
 dijkstraFormatOutputsM = return . map (\x -> if x < maxBound then x else 0) . toList
 
 testDijkstraFromFile :: Test
@@ -114,7 +114,7 @@ test1 = TestCase $ do
     --         modGraphEdgeM mgraph (*10) h
     --         )
 
-    mgraph :: Mut RealWorld (GGG (AAA Int)) <- makeGraphFromEdgesM input2
+    mgraph :: Mut RealWorld (AdjGraphU (AAA Int)) <- makeGraphFromEdgesM input2
     listGraphEdgesC mgraph >>=
         mapM_ (\(Edge (u, v, AAA e, h)) -> do
             dputs $ "(" ++ show u
@@ -123,7 +123,7 @@ test1 = TestCase $ do
             dputs $ ", " ++ show e
             dputs $ ")" ++ lr
             )
-    vout <- dijkstraSimpleM (fmapGraph (\(AAA a) -> a) mgraph) 1
+    vout :: Vector Int Int <- dijkstraSimpleM (fmapGraph (\(AAA a) -> a) mgraph) 1
     dputs $ "output: " ++ show (toList vout) ++ lr
     return ()
 

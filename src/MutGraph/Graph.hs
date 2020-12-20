@@ -36,19 +36,22 @@ import MutState.State
 import Control.DeepSeq
 import MutContainers.Unbox
 
-type family VertexKeyOf x :: *
-type family EdgeKeyOf x :: *
-type family EdgeValueOf x :: *
-type family GraphListOf x :: * -> *
-type family GraphSizeOf x :: *
+type family VertexKeyOf g :: *
+type family EdgeKeyOf g :: *
+type family EdgeValueOf g :: *
+type family GraphListOf g :: * -> *
+type family GraphSizeOf g :: *
 
 type GraphReqs g k h e l z = (
-    k ~ VertexKeyOf g,
-    h ~ EdgeKeyOf g,
-    e ~ EdgeValueOf g,
-    l ~ GraphListOf g,
-    z ~ GraphSizeOf g
+    k ~ VertexKeyOf g, -- information to locate a vertex in a graph
+    h ~ EdgeKeyOf g,   -- information to locate an edge in a graph
+    e ~ EdgeValueOf g, -- represents what data an edge holds
+    l ~ GraphListOf g, -- a list-like type used for interfacing. This is not necessarily the type used to represent the graph.
+    z ~ GraphSizeOf g  -- a numeric type used for basic numerical questions about the graph (how many nodes, edges, ...)
     )
+-- types families and GraphReqs are used, because g is monokinded.
+-- a graph g is monokinded because it has mutable uses.
+-- mutable types are only managed monokindedly as a cleaner design choice.
 
 -- immutable graph
 class GetGraphNodeCount g where
@@ -154,7 +157,9 @@ instance GetEdgeKey (Edge g) where
     getEdgeKey (Edge (_, _, _, h)) = h
     {-# INLINE getEdgeKey #-}
 
--- graph projection
+-- below code simulates a Functor by attaching a function to a graph
+-- and adds an api layer that tampers outputs with the function.
+-- Functor instance is not possible because g is monokinded because it can be mutable
 fmapGraph :: (e ~ EdgeValueOf g) => (e -> x) -> g -> GraphMap g e x
 fmapGraph f g = GraphMap (g, f)
 {-# INLINE fmapGraph #-}

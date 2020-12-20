@@ -22,13 +22,13 @@ import MutContainers.Heap
 import MutContainers.Map
 import MutContainers.Size
 
-class Dijkstra g where
+class Dijkstra g map where
     dijkstra :: (GraphReqs g k h e l z, Num e, Ord e) =>
-        g -> k -> l e
+        g -> k -> map k e
 
-class DijkstraSimpleM g where
+class DijkstraSimpleM g map where
     dijkstraSimpleM :: (MutMonad s m, GraphReqs g k h e l z, Num e, Ord e) =>
-        Cst s g -> k -> m (l e)
+        Cst s g -> k -> m (map k e)
 
 class DijkstraM g q scanned labels where
     dijkstraM :: (MutMonad s m, GraphReqs g k h e l z, Num e, Ord e,
@@ -140,7 +140,7 @@ instance (
 
 
 type GenInputs g k h e l z = (g, k)
-type GenOutputs l e = l e
+type GenOutputs map k e = map k e
 type InputsM m s g k e labels scanned q = (
         Mut s scanned,
         Mut s labels,
@@ -150,14 +150,14 @@ type InputsM m s g k e labels scanned q = (
     )
 type OutputsM m s g e labels = (Mut s labels, Cst s g)
 type GenInputsM s m g k h e l z = (Cst s g, k)
-type GenOutputsM s m l e = l e
+type GenOutputsM s m map k e = map k e
 
 instance (
     GraphReqs g k h e l z,
     UThawM g,
-    DijkstraSimpleM g,
+    DijkstraSimpleM g map,
     MutToCst g
-    ) => Dijkstra g where
+    ) => Dijkstra g map where
     dijkstra _graph _source =
         runST $ runM formatInputsM runAlgoM formatOutputsM
             (_graph, _source)
@@ -168,16 +168,16 @@ instance (
                 mgraph <- uthawM graph
                 return (cst mgraph, source)
             runAlgoM :: (MutMonad s m) =>
-                GenInputsM s m g k h e l z -> m (GenOutputsM s m l e)
+                GenInputsM s m g k h e l z -> m (GenOutputsM s m map k e)
             runAlgoM = uncurryN dijkstraSimpleM
             formatOutputsM :: (MutMonad s m) =>
-                GenOutputsM s m l e -> m (GenOutputs l e)
+                GenOutputsM s m map k e -> m (GenOutputs map k e)
             formatOutputsM = return
     {-# INLINE dijkstra #-}
 
 type Scanned = VectorU
 type Labels = VectorU
-type Queue e k = Heap (VectorU (e, k))
+type Queue e k = Heap (VectorU Int (e, k))
 type QueueVec = VectorU
 
 instance (
@@ -186,9 +186,9 @@ instance (
     Num k,
     Unbox e,
     q ~ Queue e k,
-    scanned ~ Scanned Bool,
-    labels ~ Labels e,
-    qvec ~ QueueVec (e, k),
+    scanned ~ Scanned k Bool,
+    labels ~ Labels k e,
+    qvec ~ QueueVec k (e, k),
     z ~ k,
     k ~ KeyOf labels,
     k ~ KeyOf scanned,
@@ -200,9 +200,9 @@ instance (
     ReplicateM qvec,
     MakeHeapM qvec,
     DijkstraM g q scanned labels,
-    Convert labels (l e),
+    Convert labels (map k e),
     MutToCst labels
-    ) => DijkstraSimpleM g where
+    ) => DijkstraSimpleM g map where
     dijkstraSimpleM _graph _source =
         runM formatInputsM runAlgoM formatOutputsM 
             (_graph, _source)
@@ -225,6 +225,6 @@ instance (
                 uncurryN dijkstraM inputs
                 return (labels, mgraph)
             formatOutputsM :: (MutMonad s m) =>
-                OutputsM m s g e labels -> m (GenOutputsM s m l e)
+                OutputsM m s g e labels -> m (GenOutputsM s m map k e)
             formatOutputsM (labels, _) = ufreezeC (cst labels) >>= (return . convert)
     {-# INLINE dijkstraSimpleM #-}
