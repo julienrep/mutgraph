@@ -6,7 +6,7 @@ module MutGraph.Dijkstra (
     DijkstraLoopM, dijkstraLoopM,
     DijkstraScanM, dijkstraScanM,
 ) where
-import Prelude 
+import Prelude (($), Bool(..), Int, Num(..), Ord(..), Bounded(..), Traversable(..))
 import MutGraph.Graph
 import MutState.State
 import Control.Monad hiding (replicateM)
@@ -22,13 +22,13 @@ import MutContainers.Heap
 import MutContainers.Map
 import MutContainers.Size
 
-class Dijkstra g map where
+class Dijkstra g where
     dijkstra :: (GraphReqs g k h e l z, Num e, Ord e) =>
-        g -> k -> map k e
+        g -> k -> l (k, e)
 
-class DijkstraSimpleM g map where
+class DijkstraSimpleM g where
     dijkstraSimpleM :: (MutMonad s m, GraphReqs g k h e l z, Num e, Ord e) =>
-        Cst s g -> k -> m (map k e)
+        Cst s g -> k -> m (l (k, e))
 
 class DijkstraM g q scanned labels where
     dijkstraM :: (MutMonad s m, GraphReqs g k h e l z, Num e, Ord e,
@@ -140,7 +140,7 @@ instance (
 
 
 type GenInputs g k h e l z = (g, k)
-type GenOutputs map k e = map k e
+type GenOutputs l k e = l (k, e)
 type InputsM m s g k e labels scanned q = (
         Mut s scanned,
         Mut s labels,
@@ -150,14 +150,14 @@ type InputsM m s g k e labels scanned q = (
     )
 type OutputsM m s g e labels = (Mut s labels, Cst s g)
 type GenInputsM s m g k h e l z = (Cst s g, k)
-type GenOutputsM s m map k e = map k e
+type GenOutputsM s m l k e = l (k, e)
 
 instance (
     GraphReqs g k h e l z,
     UThawM g,
-    DijkstraSimpleM g map,
+    DijkstraSimpleM g,
     MutToCst g
-    ) => Dijkstra g map where
+    ) => Dijkstra g where
     dijkstra _graph _source =
         runST $ runM formatInputsM runAlgoM formatOutputsM
             (_graph, _source)
@@ -168,10 +168,10 @@ instance (
                 mgraph <- uthawM graph
                 return (cst mgraph, source)
             runAlgoM :: (MutMonad s m) =>
-                GenInputsM s m g k h e l z -> m (GenOutputsM s m map k e)
+                GenInputsM s m g k h e l z -> m (GenOutputsM s m l k e)
             runAlgoM = uncurryN dijkstraSimpleM
             formatOutputsM :: (MutMonad s m) =>
-                GenOutputsM s m map k e -> m (GenOutputs map k e)
+                GenOutputsM s m l k e -> m (GenOutputs l k e)
             formatOutputsM = return
     {-# INLINE dijkstra #-}
 
@@ -194,15 +194,17 @@ instance (
     k ~ KeyOf scanned,
     k ~ SizeOf labels,
     k ~ SizeOf scanned,
+    Zip l,
+    EnumFrom l,
     UFreezeC labels,
     ReplicateM labels,
     ReplicateM scanned,
     ReplicateM qvec,
     MakeHeapM qvec,
     DijkstraM g q scanned labels,
-    Convert labels (map k e),
+    Convert labels (l e),
     MutToCst labels
-    ) => DijkstraSimpleM g map where
+    ) => DijkstraSimpleM g where
     dijkstraSimpleM _graph _source =
         runM formatInputsM runAlgoM formatOutputsM 
             (_graph, _source)
@@ -225,6 +227,8 @@ instance (
                 uncurryN dijkstraM inputs
                 return (labels, mgraph)
             formatOutputsM :: (MutMonad s m) =>
-                OutputsM m s g e labels -> m (GenOutputsM s m map k e)
-            formatOutputsM (labels, _) = ufreezeC (cst labels) >>= (return . convert)
+                OutputsM m s g e labels -> m (GenOutputsM s m l k e)
+            formatOutputsM (labels, _) = do
+                v <- ufreezeC (cst labels)
+                return $ zip (enumFrom 0) (convert v)
     {-# INLINE dijkstraSimpleM #-}

@@ -8,6 +8,7 @@ where
 import Prelude hiding (map)
 import Test.HUnit
 import System.CPUTime
+import System.Mem
 import Control.DeepSeq
 import Control.Exception
 import Control.Monad
@@ -47,9 +48,10 @@ dijkstraFormatInputsM (list, source) = do
     return inputs
 dijkstraRunM :: (MutMonad s IO) => 
     (Mut s (AdjGraphU Int), Int)
-    -> IO (Vector Int Int)
+    -> IO (Vector Int (Int, Int))
 dijkstraRunM inputs = do
     evaluate (rnf inputs)
+    performGC
     dputs $ "Dijkstra running on graph..." ++ lr
     t1 <- getCPUTime
     outputs <- uncurryN dijkstraSimpleM inputs
@@ -58,8 +60,8 @@ dijkstraRunM inputs = do
     let dt :: Double = fromIntegral (t2-t1) * 1e-12
     dputs $ "Dijkstra ran in " ++ show dt ++ " s" ++ lr
     return outputs
-dijkstraFormatOutputsM :: Vector Int Int -> IO [Int]
-dijkstraFormatOutputsM = return . map (\x -> if x < maxBound then x else 0) . toList
+dijkstraFormatOutputsM :: Vector Int (Int, Int) -> IO [Int]
+dijkstraFormatOutputsM = return . map (\(_, x) -> if x < maxBound then x else 0) . toList
 
 testDijkstraFromFile :: Test
 testDijkstraFromFile = TestCase $ do
@@ -123,7 +125,7 @@ test1 = TestCase $ do
             dputs $ ", " ++ show e
             dputs $ ")" ++ lr
             )
-    vout :: Vector Int Int <- dijkstraSimpleM (fmapGraph (\(AAA a) -> a) mgraph) 1
+    vout :: Vector Int (Int, Int) <- dijkstraSimpleM (fmapGraph (\(AAA a) -> a) mgraph) 1
     dputs $ "output: " ++ show (toList vout) ++ lr
     return ()
 

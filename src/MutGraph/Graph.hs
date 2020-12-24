@@ -121,7 +121,7 @@ class MakeGraphFromEdgesM g list where
         return graph
     {-# INLINE makeGraphFromEdgesM #-}
 class ParseEdgesFromFileM parser list e k z where
-    parseEdgesFromFileM :: (MutMonad s m, m ~ IO) =>
+    parseEdgesFromFileM :: (MutMonad s m, Foldable list, m ~ IO) =>
         parser -> m (Maybe (list (k, k, e), z, z))
 
 

@@ -2,6 +2,7 @@ module MutContainers.List
   ( Zip (..),
     ZipWith (..),
     Map (..),
+    EnumFrom (..),
     EnumFromTo (..),
     Concat (..),
     Replicate (..),
@@ -27,7 +28,9 @@ class ZipWith (l :: * -> *) where zipWith :: (a -> b -> c) -> l a -> l b -> l c
 
 class Map (l :: * -> *) where map :: (a -> b) -> l a -> l b
 
-class EnumFromTo (l :: * -> *) where enumFromTo :: (Enum a) => a -> a -> l a -- TODO generalize
+class EnumFrom (l :: * -> *) where enumFrom :: (Enum a) => a -> l a
+
+class EnumFromTo (l :: * -> *) where enumFromTo :: (Enum a) => a -> a -> l a
 
 class Concat (l :: * -> *) where concat :: l a -> l a -> l a
 
@@ -55,4 +58,15 @@ class PopBackM l where
 -- Prelude instances
 instance Zip [] where zip = Prelude.zip
 
+instance ZipWith [] where zipWith = Prelude.zipWith
+
 instance Map [] where map = Prelude.map
+
+instance EnumFrom [] where enumFrom = Prelude.enumFrom
+
+instance EnumFromTo [] where enumFromTo = Prelude.enumFromTo
+
+instance Concat [] where concat l1 l2 = l1 Prelude.++ l2
+
+instance Replicate [] where replicate = Prelude.replicate
+

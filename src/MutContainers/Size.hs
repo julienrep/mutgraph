@@ -14,6 +14,8 @@ import MutState.State
 
 type family SizeOf (l :: k) :: *
 
+type instance SizeOf [] = Int
+
 class GetSize x where
     getSize :: (z ~ SizeOf x) => x -> z
 class GetSizeC x where

@@ -4,7 +4,7 @@ module MutGraph.Parser (
 import Prelude (Int, Maybe(..), String, Either(..), Functor(..), Monad(..))
 import Data.List
 import System.IO
-import Control.DeepSeq
+-- import Control.DeepSeq
 import Control.Exception
 import MutGraph.Graph
 import qualified Data.ByteString.Char8 as C
@@ -43,7 +43,7 @@ instance ParseEdgesFromFileM SimpleParser [] Int Int Int where
             let (headerLine : fileLines) = C.lines contents
             let (nodeCount, edgeCount) = parseHeader headerLine
             let edges                    = fmap parseEdgeWData fileLines
-            evaluate (rnf (edges, nodeCount, edgeCount))
-            hClose file
+            -- evaluate (rnf (edges, nodeCount, edgeCount))
+            -- hClose file
             return (edges, nodeCount, edgeCount)
     {-# INLINE parseEdgesFromFileM #-}

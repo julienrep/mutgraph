@@ -241,6 +241,12 @@ instance (V.Vector v a) => Convert (v a) (Vec v k a) where
 instance (V.Vector v a, V.Vector w a) => Convert (Vec v k a) (Vec w k a) where
     convert (Vec v) = Vec (V.convert v)
     {-# INLINE convert #-}
+instance (V.Vector v a) => Convert (Vec v k a) [a] where
+    convert (Vec v) = V.toList v
+    {-# INLINE convert #-}
+instance (V.Vector v a) => Convert [a] (Vec v k a) where
+    convert = Vec . V.fromList
+    {-# INLINE convert #-}
 
 instance (mv ~ V.Mutable v, VM.MVector mv a) => MakeNewM (Vec v k a) where
     makeNewM = MVec <$> VM.new 0
@@ -307,6 +313,9 @@ instance (forall b . V.Vector v b) => Map (Vec v k) where
 instance (forall b . V.Vector v b) => EnumFromTo (Vec v k) where
     enumFromTo a b = Vec $ V.enumFromTo a b --Vec $ V.enumFromN a (b - a + 1)
     {-# INLINE enumFromTo #-}
+instance (forall b . V.Vector v b) => EnumFrom (Vec v k) where
+    enumFrom a = Vec $ V.fromList (Prelude.enumFrom a)
+    {-# INLINE enumFrom #-}
 instance (forall b . V.Vector v b) => Concat (Vec v k) where
     concat (Vec v) (Vec v') = Vec $ V.concat [v, v']
     {-# INLINE concat #-}
