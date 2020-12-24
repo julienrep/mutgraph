@@ -4,7 +4,6 @@ module MutGraph.AdjacencyList (
 ) where
 import Prelude (Num(..), Enum, (.), (<$>), ($))
 import Data.Foldable hiding (concat)
-import Data.Traversable
 import Data.Ord
 import Control.Monad
 import Control.Monad.ST
@@ -55,8 +54,6 @@ type AdjListReqs g k h e l z i w v = (
     Num i,
     Enum i,
     h ~ (k, i),
-    Functor l,
-    Foldable l,
     ZipWith l,
     EnumFromTo l
     )
@@ -111,7 +108,7 @@ instance (AdjListReqs g k h e l z i w v) =>
         n = getSize v - 1
     {-# INLINE listGraphEdgesFrom #-}
 
-instance (AdjListReqs g k h e l z i w v, Monad l) => 
+instance (AdjListReqs g k h e l z i w v) => 
     ListGraphEdges (AdjList l i w v k e)
 
 instance (MutAdjListReqs g k h e l z i w v) =>
@@ -155,7 +152,7 @@ instance (MutAdjListReqs g k h e l z i w v) =>
                 lh = fmap (u,) ln
     {-# INLINE listGraphEdgesFromC #-}
 
-instance (MutAdjListReqs g k h e l z i w v, Traversable l, Monad l) => 
+instance (MutAdjListReqs g k h e l z i w v) => 
     ListGraphEdgesC (AdjList l i w v k e)
 
 instance (MutAdjListReqs g k h e l z i w v, Ord k,
