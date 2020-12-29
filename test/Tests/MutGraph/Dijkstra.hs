@@ -5,7 +5,7 @@ module Tests.MutGraph.Dijkstra (
     tests,
 )
 where
-import Prelude hiding (map)
+import Prelude hiding ((++))
 import Test.HUnit
 import System.CPUTime
 import System.Mem
@@ -23,6 +23,7 @@ import MutContainers.Run
 import MutContainers.Vector
 import MutContainers.Unbox
 import MutContainers.List
+import Containers.List
 
 dputs :: String -> IO ()
 dputs = putStr
@@ -61,7 +62,7 @@ dijkstraRunM inputs = do
     dputs $ "Dijkstra ran in " ++ show dt ++ " s" ++ lr
     return outputs
 dijkstraFormatOutputsM :: Vector Int (Int, Int) -> IO [Int]
-dijkstraFormatOutputsM = return . map (\(_, x) -> if x < maxBound then x else 0) . toList
+dijkstraFormatOutputsM = return . fmap (\(_, x) -> if x < maxBound then x else 0) . toList
 
 testDijkstraFromFile :: Test
 testDijkstraFromFile = TestCase $ do

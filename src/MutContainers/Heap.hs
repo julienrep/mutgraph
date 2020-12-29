@@ -8,7 +8,7 @@ import Control.Monad
 import MutContainers.PriorityQueue
 import MutContainers.Map
 import MutContainers.Container
-import MutContainers.Size
+import Containers.Container (SizeOf)
 import MutState.State
 
 newtype Heap h = Heap h

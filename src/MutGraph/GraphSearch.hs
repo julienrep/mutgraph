@@ -12,7 +12,7 @@ import Control.Monad hiding (replicateM)
 import MutContainers.Container
 import MutContainers.List
 import MutContainers.Map
-import MutContainers.Size
+import Containers.Container
 
 data VisitStatus = Unvisited | Visiting | Visited
 

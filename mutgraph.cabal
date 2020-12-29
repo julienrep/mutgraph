@@ -21,6 +21,10 @@ source-repository head
 
 library
   exposed-modules:
+      Containers.Prelude
+      Containers.Container
+      Containers.NonEmpty
+      Containers.List
       MutGraph.Graph
       MutGraph.AdjacencyList
       MutGraph.Dijkstra
@@ -31,7 +35,6 @@ library
       MutContainers.Vector
       MutContainers.Unbox
       MutContainers.Container
-      MutContainers.Size
       MutContainers.Map
       MutContainers.PriorityQueue
       MutContainers.Heap

@@ -13,6 +13,7 @@ import Control.Monad hiding (replicateM)
 import MutContainers.PriorityQueue
 import MutContainers.Container
 import Control.Monad.ST
+import Containers.List
 import MutContainers.List
 import MutContainers.Vector
 import MutContainers.Unbox
@@ -20,7 +21,7 @@ import MutContainers.Run
 import MutContainers.Curry
 import MutContainers.Heap
 import MutContainers.Map
-import MutContainers.Size
+import Containers.Container
 
 class Dijkstra g where
     dijkstra :: (GraphReqs g k h e l z, Num e, Ord e) =>
@@ -105,8 +106,8 @@ instance (
     ) => DijkstraLoopM g q scanned labels where
     dijkstraLoopM scanned labels queue graph = loop where
         loop = do
-            empty <- isEmptyC (cst queue)
-            unless empty $ do
+            isEmpty <- isEmptyC (cst queue)
+            unless isEmpty $ do
                 (du, u) <- extractMinM queue
                 wasScanned <- readC (cst scanned) u
                 unless wasScanned $ do

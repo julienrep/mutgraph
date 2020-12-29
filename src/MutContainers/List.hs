@@ -1,14 +1,5 @@
 module MutContainers.List
-  ( Zip (..),
-    ZipWith (..),
-    Map (..),
-    EnumFrom (..),
-    EnumFromTo (..),
-    Concat (..),
-    Replicate (..),
-    ToList (..),
-    FromList (..),
-    ReplicateM (..),
+  ( ReplicateM (..),
     PushFrontM (..),
     PushBackM (..),
     PopFrontM (..),
@@ -16,29 +7,9 @@ module MutContainers.List
   )
 where
 
-import MutState.State
-import qualified Prelude
-import Prelude (Enum)
+import Containers.Container (SizeOf)
 import MutContainers.Map
-import MutContainers.Size
-
-class Zip (l :: * -> *) where zip :: l a -> l b -> l (a, b)
-
-class ZipWith (l :: * -> *) where zipWith :: (a -> b -> c) -> l a -> l b -> l c
-
-class Map (l :: * -> *) where map :: (a -> b) -> l a -> l b
-
-class EnumFrom (l :: * -> *) where enumFrom :: (Enum a) => a -> l a
-
-class EnumFromTo (l :: * -> *) where enumFromTo :: (Enum a) => a -> a -> l a
-
-class Concat (l :: * -> *) where concat :: l a -> l a -> l a
-
-class Replicate (l :: * -> *) where replicate :: SizeOf l -> a -> l a
-
-class ToList (l :: * -> *) where toList :: l a -> [a]
-
-class FromList (l :: * -> *) where fromList :: [a] -> l a
+import MutState.State
 
 class ReplicateM l where
   replicateM :: (MutMonad s m, a ~ ValOf l) => SizeOf l -> m a -> m (Mut s l)
@@ -54,19 +25,3 @@ class PopFrontM l where
 
 class PopBackM l where
   popBackM :: (MutMonad s m, a ~ ValOf l) => Mut s l -> m a
-
--- Prelude instances
-instance Zip [] where zip = Prelude.zip
-
-instance ZipWith [] where zipWith = Prelude.zipWith
-
-instance Map [] where map = Prelude.map
-
-instance EnumFrom [] where enumFrom = Prelude.enumFrom
-
-instance EnumFromTo [] where enumFromTo = Prelude.enumFromTo
-
-instance Concat [] where concat l1 l2 = l1 Prelude.++ l2
-
-instance Replicate [] where replicate = Prelude.replicate
-

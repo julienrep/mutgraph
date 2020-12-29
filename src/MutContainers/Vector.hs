@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE StandaloneDeriving #-}
 module MutContainers.Vector (
     Vec, DVec, VecM, DVecM,
     Vector, VectorU, VectorS, VectorM,
@@ -7,10 +9,12 @@ where
 import Prelude
 import Control.Monad
 import Control.DeepSeq
+import Containers.NonEmpty
+import Containers.List
 import MutState.State
+import Containers.Container
 import MutContainers.Container
 import MutContainers.Map
-import MutContainers.Size
 import MutContainers.List
 import qualified Data.Vector.Generic           as V
 import qualified Data.Vector.Generic.Mutable   as VM
@@ -28,10 +32,10 @@ type instance Cst s (Vec v k a) = MVec (V.Mutable v) s k a
 type instance KeyOf (Vec v) = Int
 type instance SizeOf (Vec v) = Int
 type instance KeyOf (Vec v k) = k
-type instance SizeOf (Vec v k) = SizeOf (Vec v)
+type instance SizeOf (Vec v k) = Int
 type instance ValOf (Vec v k a) = a
-type instance KeyOf (Vec v k a) = KeyOf (Vec v k)
-type instance SizeOf (Vec v k a) = SizeOf (Vec v k)
+type instance KeyOf (Vec v k a) = k
+type instance SizeOf (Vec v k a) = Int
 
 newtype DVec (v :: * -> *) (k :: *) (a :: *) = DVec (v a)
 newtype MDVec (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = 
@@ -80,7 +84,42 @@ type DVectorS = DVec VS.Vector
 type VectorM = VecM VI.Vector
 type DVectorM = DVecM VI.Vector
 
--- inherit typeclasses -- need to find some automated deriving mechanism
+
+-- Prelude classes deriving
+
+deriving instance (Functor v) => Functor (Vec v k)
+deriving instance (Foldable v) => Foldable (Vec v k)
+deriving instance (Applicative v) => Applicative (Vec v k)
+deriving instance (Monad v) => Monad (Vec v k)
+deriving instance (Semigroup (v a)) => Semigroup (Vec v k a)
+deriving instance (Monoid (v a)) => Monoid (Vec v k a)
+-- instance (Functor v) => Functor (Vec v k) where
+--     fmap f (Vec l) = Vec (fmap f l)
+--     {-# inline fmap #-}
+-- instance (Foldable v) => Foldable (Vec v k) where
+--     foldMap f (Vec l) = foldMap f l
+--     {-# inline foldMap #-}
+--     foldr f z (Vec l) = foldr f z l
+--     {-# inline foldr #-}
+instance (Traversable v) => Traversable (Vec v k) where
+    traverse f (Vec l) = Vec <$> traverse f l
+    {-# inline traverse #-}
+    sequenceA (Vec l) = Vec <$> sequenceA l
+    {-# inline sequenceA #-}
+-- instance (Applicative v) => Applicative (Vec v k) where
+--     pure x = Vec (pure x)
+--     {-# inline pure #-}
+--     (Vec f) <*> (Vec l) = Vec (f <*> l)
+--     {-# inline (<*>) #-}
+-- instance (Monad v) => Monad (Vec v k) where
+--     (Vec ma) >>= f = Vec (ma >>= \x -> let (Vec v) = f x in v)
+--     {-# inline (>>=) #-}
+-- instance (Semigroup (v a)) => Semigroup (Vec v k a) where
+--     (Vec v) <> (Vec w) = Vec (v <> w)
+--     {-# inline (<>) #-}
+-- instance (Monoid (v a)) => Monoid (Vec v k a) where
+--     mempty = Vec mempty
+
 instance (NFData (v a)) => NFData (Vec v k a) where rnf (Vec v) = rnf v
 instance NFData (MVec v s k a) where rnf (MVec _) = ()
 instance (NFData (v a)) => NFData (DVec v k a) where rnf (DVec v) = rnf v
@@ -89,34 +128,6 @@ instance (NFData (v a)) => NFData (VecM v k a) where rnf (VecM v) = rnf v
 instance NFData (MVecM v s k a) where rnf (MVecM _) = ()
 instance (NFData (v a)) => NFData (DVecM v k a) where rnf (DVecM v) = rnf v
 instance NFData (MDVecM v s k a) where rnf (MDVecM _) = ()
-
-instance (Functor v) => Functor (Vec v k) where
-    fmap f (Vec l) = Vec (fmap f l)
-    {-# inline fmap #-}
-instance (Foldable v) => Foldable (Vec v k) where
-    foldMap f (Vec l) = foldMap f l
-    {-# inline foldMap #-}
-    foldr f z (Vec l) = foldr f z l
-    {-# inline foldr #-}
-instance (Traversable v) => Traversable (Vec v k) where
-    traverse f (Vec l) = Vec <$> traverse f l
-    {-# inline traverse #-}
-    sequenceA (Vec l) = Vec <$> sequenceA l
-    {-# inline sequenceA #-}
-instance (Applicative v) => Applicative (Vec v k) where
-    pure x = Vec (pure x)
-    {-# inline pure #-}
-    (Vec f) <*> (Vec l) = Vec (f <*> l)
-    {-# inline (<*>) #-}
-instance (Monad v) => Monad (Vec v k) where
-    (Vec ma) >>= f = Vec (ma >>= \x -> let (Vec v) = f x in v)
-    {-# inline (>>=) #-}
-instance (Semigroup (v a)) => Semigroup (Vec v k a) where
-    (Vec v) <> (Vec w) = Vec (v <> w)
-    {-# inline (<>) #-}
-instance (Monoid (v a)) => Monoid (Vec v k a) where
-    mempty = Vec mempty
-
 
 -- Vector
 
@@ -165,88 +176,7 @@ instance (ReadAt (DVec v k a)) => ReadAt (DVecM v k a) where
     at (DVecM v) = at (DVec v)
     {-# INLINE at #-}
 
-
---  Size
-
-
-instance (V.Vector v a) => GetSize (Vec v k a) where
-    getSize (Vec v) = V.length v
-    {-# INLINE getSize #-}
-instance (V.Vector v a) => GetSize (DVec v k a) where
-    getSize (DVec v) = V.length v
-    {-# INLINE getSize #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a) => GetSizeC (Vec v k a) where
-    getSizeC (MVec mv) = return (VM.length mv)
-    {-# INLINE getSizeC #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a) => GetSizeC (DVec v k a) where
-    getSizeC (MDVec vl) = readVar vl >>= \l -> return (VM.length l)
-    {-# INLINE getSizeC #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a) => GrowSizeM (DVec v k a) where
-    growSizeM (MDVec vl) n = readVar vl >>= flip VM.unsafeGrow n >>= writeVar vl
-    {-# INLINE growSizeM #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a) => ShrinkSizeM (DVec v k a) where
-    shrinkSizeM (MDVec vl) n = readVar vl >>= \l -> writeVar vl (VM.unsafeSlice 0 n l)
-    {-# INLINE shrinkSizeM #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a) => ModifySizeM (DVec v k a) where
-    modifySizeM x f = do
-        let MDVec vl = x
-        size <- readVar vl >>= \l -> return (VM.length l)
-        let diff = f size - size
-        if diff > 0 then growSizeM x diff
-        else when (diff < 0) $ shrinkSizeM x (-diff)
-    {-# INLINE modifySizeM #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a) => SetSizeM (DVec v k a)
-instance (mv ~ V.Mutable v, VM.MVector mv a) => EnsureSizeM (DVec v k a) where
-    ensureSizeM x z = do
-        let MDVec vl = x
-        size <- readVar vl >>= \l -> return (VM.length l)
-        let diff = z - size
-        when (diff > 0) $ growSizeM x diff
-    {-# INLINE ensureSizeM #-}
-
-instance (V.Vector v a) => GetSize (VecM v k a) where
-    getSize (VecM v) = getSize (Vec v)
-instance (V.Vector v a) => GetSize (DVecM v k a) where
-    getSize (DVecM v) = getSize (DVec v)
-instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => GetSizeC (VecM v k a) where
-    getSizeC (MVecM mv) = getSizeC (MVec mv)
-instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => GetSizeC (DVecM v k a) where
-    getSizeC (MDVecM mv) = getSizeC (MDVec mv)
-instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => GrowSizeM (DVecM v k a) where
-    growSizeM (MDVecM mv) = growSizeM (MDVec mv)
-instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => ShrinkSizeM (DVecM v k a) where
-    shrinkSizeM (MDVecM mv) = shrinkSizeM (MDVec mv)
-instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => ModifySizeM (DVecM v k a) where
-    modifySizeM (MDVecM mv) = modifySizeM (MDVec mv)
-instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => SetSizeM (DVecM v k a) where
-    setSizeM (MDVecM mv) = setSizeM (MDVec mv)
-instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => EnsureSizeM (DVecM v k a) where
-    ensureSizeM (MDVecM mv) = ensureSizeM (MDVec mv)
-
-
--- Container
-
-instance (V.Vector v a) => MakeNew (Vec v k a) where
-    makeNew = Vec V.empty
-    {-# INLINE makeNew #-}
-instance (V.Vector v a) => MakeNew (DVec v k a) where
-    makeNew = DVec V.empty
-    {-# INLINE makeNew #-}
-instance (V.Vector v a) => Convert (Vec v k a) (v a) where
-    convert (Vec v) = v
-    {-# INLINE convert #-}
-instance (V.Vector v a) => Convert (v a) (Vec v k a) where
-    convert = Vec
-    {-# INLINE convert #-}
-instance (V.Vector v a, V.Vector w a) => Convert (Vec v k a) (Vec w k a) where
-    convert (Vec v) = Vec (V.convert v)
-    {-# INLINE convert #-}
-instance (V.Vector v a) => Convert (Vec v k a) [a] where
-    convert (Vec v) = V.toList v
-    {-# INLINE convert #-}
-instance (V.Vector v a) => Convert [a] (Vec v k a) where
-    convert = Vec . V.fromList
-    {-# INLINE convert #-}
+-- MutContainers.Container
 
 instance (mv ~ V.Mutable v, VM.MVector mv a) => MakeNewM (Vec v k a) where
     makeNewM = MVec <$> VM.new 0
@@ -297,28 +227,120 @@ instance (forall b . V.Vector v b, UThawM a) => UThawM (DVecM v k a) where
     uthawM (DVecM mv) = MDVecM <$> (V.mapM uthawM mv >>= V.unsafeThaw >>= newVar) -- O(n)
     {-# INLINE uthawM #-}
 
+instance (mv ~ V.Mutable v, VM.MVector mv a) => GetSizeC (Vec v k a) where
+    getSizeC (MVec mv) = return (VM.length mv)
+    {-# INLINE getSizeC #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => GetSizeC (DVec v k a) where
+    getSizeC (MDVec vl) = readVar vl >>= \l -> return (VM.length l)
+    {-# INLINE getSizeC #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => GrowSizeM (DVec v k a) where
+    growSizeM (MDVec vl) n = readVar vl >>= flip VM.unsafeGrow n >>= writeVar vl
+    {-# INLINE growSizeM #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => ShrinkSizeM (DVec v k a) where
+    shrinkSizeM (MDVec vl) n = readVar vl >>= \l -> writeVar vl (VM.unsafeSlice 0 n l)
+    {-# INLINE shrinkSizeM #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => ModifySizeM (DVec v k a) where
+    modifySizeM x f = do
+        let MDVec vl = x
+        size <- readVar vl >>= \l -> return (VM.length l)
+        let diff = f size - size
+        if diff > 0 then growSizeM x diff
+        else when (diff < 0) $ shrinkSizeM x (-diff)
+    {-# INLINE modifySizeM #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => SetSizeM (DVec v k a)
+instance (mv ~ V.Mutable v, VM.MVector mv a) => EnsureSizeM (DVec v k a) where
+    ensureSizeM x z = do
+        let MDVec vl = x
+        size <- readVar vl >>= \l -> return (VM.length l)
+        let diff = z - size
+        when (diff > 0) $ growSizeM x diff
+    {-# INLINE ensureSizeM #-}
+
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => GetSizeC (VecM v k a) where
+    getSizeC (MVecM mv) = getSizeC (MVec mv)
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => GetSizeC (DVecM v k a) where
+    getSizeC (MDVecM mv) = getSizeC (MDVec mv)
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => GrowSizeM (DVecM v k a) where
+    growSizeM (MDVecM mv) = growSizeM (MDVec mv)
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => ShrinkSizeM (DVecM v k a) where
+    shrinkSizeM (MDVecM mv) = shrinkSizeM (MDVec mv)
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => ModifySizeM (DVecM v k a) where
+    modifySizeM (MDVecM mv) = modifySizeM (MDVec mv)
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => SetSizeM (DVecM v k a) where
+    setSizeM (MDVecM mv) = setSizeM (MDVec mv)
+instance (mv ~ V.Mutable v, forall b . VM.MVector mv b) => EnsureSizeM (DVecM v k a) where
+    ensureSizeM (MDVecM mv) = ensureSizeM (MDVec mv)
 
 
--- List
+-- Containers.Container
 
+instance (V.Vector v a) => Convert (Vec v k a) (v a) where
+    convert (Vec v) = v
+    {-# INLINE convert #-}
+instance (V.Vector v a) => Convert (v a) (Vec v k a) where
+    convert = Vec
+    {-# INLINE convert #-}
+instance (V.Vector v a, V.Vector w a) => Convert (Vec v k a) (Vec w k a) where
+    convert (Vec v) = Vec (V.convert v)
+    {-# INLINE convert #-}
+instance (V.Vector v a) => Convert (Vec v k a) [a] where
+    convert (Vec v) = V.toList v
+    {-# INLINE convert #-}
+instance (V.Vector v a) => Convert [a] (Vec v k a) where
+    convert = Vec . V.fromList
+    {-# INLINE convert #-}
+
+instance (V.Vector v a) => GetSize (Vec v k a) where
+    getSize (Vec v) = V.length v
+    {-# INLINE getSize #-}
+instance (V.Vector v a) => GetSize (DVec v k a) where
+    getSize (DVec v) = V.length v
+    {-# INLINE getSize #-}
+instance (V.Vector v a) => GetSize (VecM v k a) where
+    getSize (VecM v) = getSize (Vec v)
+    {-# INLINE getSize #-}
+instance (V.Vector v a) => GetSize (DVecM v k a) where
+    getSize (DVecM v) = getSize (DVec v)
+    {-# INLINE getSize #-}
+
+-- Containers.List
+
+instance (forall b . V.Vector v b) => Head (Vec v k) where
+    head nv = V.head v where (Vec v) = fromNonEmpty nv
+    {-# INLINE head #-}
+instance (forall b . V.Vector v b) => Last (Vec v k) where
+    last nv = V.last v where (Vec v) = fromNonEmpty nv
+    {-# INLINE last #-}
+instance (forall b . V.Vector v b) => Tail (Vec v k) where
+    tail nv = Vec (V.tail v) where (Vec v) = fromNonEmpty nv
+    {-# INLINE tail #-}
+instance (forall b . V.Vector v b) => Empty (Vec v k) where
+    empty = Vec V.empty
+    {-# INLINE empty #-}
+instance (forall b . V.Vector v b) => Singleton (Vec v k) where
+    singleton a = Vec (V.singleton a)
+    {-# INLINE singleton #-}
+instance (forall b . V.Vector v b) => Cons (Vec v k) where
+    cons a (Vec v) = Vec (V.cons a v)
+    {-# INLINE cons #-}
+instance (forall b . V.Vector v b) => Snoc (Vec v k) where
+    snoc (Vec v) a = Vec (V.snoc v a)
+    {-# INLINE snoc #-}
 instance (forall b . V.Vector v b) => Zip (Vec v k) where
     zip (Vec v) (Vec v') = Vec (V.zip v v')
     {-# INLINE zip #-}
 instance (forall b . V.Vector v b) => ZipWith (Vec v k) where
     zipWith f (Vec v) (Vec v') = Vec (V.zipWith f v v')
     {-# INLINE zipWith #-}
-instance (forall b . V.Vector v b) => Map (Vec v k) where
-    map f (Vec v) = Vec (V.map f v)
-    {-# INLINE map #-}
 instance (forall b . V.Vector v b) => EnumFromTo (Vec v k) where
     enumFromTo a b = Vec $ V.enumFromTo a b --Vec $ V.enumFromN a (b - a + 1)
     {-# INLINE enumFromTo #-}
 instance (forall b . V.Vector v b) => EnumFrom (Vec v k) where
     enumFrom a = Vec $ V.fromList (Prelude.enumFrom a)
     {-# INLINE enumFrom #-}
-instance (forall b . V.Vector v b) => Concat (Vec v k) where
-    concat (Vec v) (Vec v') = Vec $ V.concat [v, v']
-    {-# INLINE concat #-}
+instance (forall b . V.Vector v b) => Append (Vec v k) where
+    (Vec v) ++ (Vec v') = Vec $ v V.++ v'
+    {-# INLINE (++) #-}
 instance (forall b . V.Vector v b) => Replicate (Vec v k) where
     replicate n x = Vec $ V.replicate n x
     {-# INLINE replicate #-}
@@ -329,6 +351,7 @@ instance (forall b . V.Vector v b) => FromList (Vec v k) where
     fromList = Vec . V.fromList
     {-# INLINE fromList #-}
 
+-- MutContainers.Containers
 
 instance (mv ~ V.Mutable v, VM.MVector mv a) => ReplicateM (Vec v k a) where
     replicateM n x = MVec <$> VM.replicateM n x

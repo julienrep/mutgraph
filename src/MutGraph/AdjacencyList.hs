@@ -8,11 +8,11 @@ import Data.Ord
 import Control.Monad
 import Control.Monad.ST
 import Control.DeepSeq
+import Containers.List
 import MutGraph.Graph
 import MutContainers.Container
 import MutContainers.Map
-import MutContainers.Size
-import MutContainers.List
+import Containers.Container
 import MutState.State
 
 type AdjLst 
@@ -157,7 +157,7 @@ instance (MutAdjListReqs g k h e l z i w v) =>
 
 instance (MutAdjListReqs g k h e l z i w v, Ord k,
     EnsureSizeM (SizeViaNodes g),
-    Concat l,
+    Append l,
     Replicate l,
     Num (SizeOf l),
     MutToCst w,
@@ -175,7 +175,7 @@ instance (MutAdjListReqs g k h e l z i w v, Ord k,
         where
         append v x = convert v2
             where
-            v2 = concat v1 (replicate 1 x)
+            v2 = v1 ++ replicate 1 x
             v1 = convert v :: l (k, e)
     {-# INLINE addGraphEdgeM #-}
 

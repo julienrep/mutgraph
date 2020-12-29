@@ -8,15 +8,15 @@ module Tests.Sandbox
   )
 where
 
-import Control.Monad hiding (replicateM)
+import Containers.Container
+import Containers.List
+import Containers.Prelude
 import MutContainers.Container
-import MutContainers.List hiding (enumFromTo)
+import MutContainers.List
 import MutContainers.Map
-import MutContainers.Size
 import MutContainers.Vector
 import MutState.State
 import Test.HUnit (Test (..), assertEqual)
-import Prelude hiding (map, replicate)
 
 dputs :: String -> IO ()
 dputs = putStr
@@ -53,12 +53,10 @@ listToStringM ::
   m String
 listToStringM f l = do
   n <- getSizeC l
-  r <-
-    forM
-      (enumFromTo 0 (n -1))
-      ( \i -> do
-          x <- readC l i
-          sx <- f x
-          return $ sx ++ (if i < (n -1) then ", " else "]")
-      )
+  let g = \i -> do
+        x <- readC l i
+        sx <- f x
+        return $ sx ++ (if i < (n -1) then ", " else "]")
+  let h :: [] Int = enumFromTo 0 (n - 1)
+  r <- forM h g
   foldM ((return .) . (++)) "[" r
