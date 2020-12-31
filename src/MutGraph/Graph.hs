@@ -1,4 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
 module MutGraph.Graph (
     VertexKeyOf, EdgeKeyOf, EdgeValueOf, GraphListOf, GraphSizeOf,
     GraphReqs,
@@ -21,20 +20,17 @@ module MutGraph.Graph (
     MakeGraphFromEdgesM(..),
     ParseEdgesFromFileM(..),
 
-    GetEdgeTail(..),
-    GetEdgeHead(..),
-    GetEdgeData(..),
-    GetEdgeKey(..),
+    getEdgeTail,
+    getEdgeHead,
+    getEdgeData,
+    getEdgeKey,
     Edge(..),
 
     fmapGraph,
     GraphMap,
 ) where
-import Prelude
-import Control.Monad
+import Containers.Prelude
 import MutState.State
-import Control.DeepSeq
-import Containers.Unbox
 
 type family VertexKeyOf g :: *
 type family EdgeKeyOf g :: *
@@ -126,37 +122,22 @@ class ParseEdgesFromFileM parser list e k z where
 
 
 -- edge
-class GetEdgeTail edge where getEdgeTail :: (k ~ VertexKeyOf edge) => edge -> k
-class GetEdgeHead edge where getEdgeHead :: (k ~ VertexKeyOf edge) => edge -> k
-class GetEdgeData edge where getEdgeData :: (e ~ EdgeValueOf edge) => edge -> e
-class GetEdgeKey edge where getEdgeKey :: (h ~ EdgeKeyOf edge) => edge -> h
-
 newtype Edge g = Edge (VertexKeyOf g, VertexKeyOf g, EdgeValueOf g, EdgeKeyOf g)
-instance (GraphReqs g k h e l z, NFData (k, k, e, h)) => NFData (Edge g) where
-    rnf (Edge (u, v, e, h)) = rnf (u, v, e, h)
-    {-# INLINE rnf #-}
-derivingUnbox "Edge"
-    [t| forall g. (Unbox (VertexKeyOf g), Unbox (EdgeKeyOf g), 
-        Unbox (EdgeValueOf g)) => 
-        Edge g -> (VertexKeyOf g, VertexKeyOf g, EdgeValueOf g, EdgeKeyOf g) |]
-    [| \ (Edge edge) -> edge |]
-    [| Edge |]
 type instance VertexKeyOf (Edge g) = VertexKeyOf g
 type instance EdgeKeyOf (Edge g) = EdgeKeyOf g
 type instance EdgeValueOf (Edge g) = EdgeValueOf g
-
-instance GetEdgeTail (Edge g) where
-    getEdgeTail (Edge (u, _, _, _)) = u
-    {-# INLINE getEdgeTail #-}
-instance GetEdgeHead (Edge g) where
-    getEdgeHead (Edge (_, v, _, _)) = v
-    {-# INLINE getEdgeHead #-}
-instance GetEdgeData (Edge g) where
-    getEdgeData (Edge (_, _, e, _)) = e
-    {-# INLINE getEdgeData #-}
-instance GetEdgeKey (Edge g) where
-    getEdgeKey (Edge (_, _, _, h)) = h
-    {-# INLINE getEdgeKey #-}
+getEdgeTail :: Edge g -> VertexKeyOf g
+getEdgeTail (Edge (u, _, _, _)) = u
+{-# INLINE getEdgeTail #-}
+getEdgeHead :: Edge g -> VertexKeyOf g
+getEdgeHead (Edge (_, v, _, _)) = v
+{-# INLINE getEdgeHead #-}
+getEdgeData :: Edge g -> EdgeValueOf g
+getEdgeData (Edge (_, _, e, _)) = e
+{-# INLINE getEdgeData #-}
+getEdgeKey :: Edge g -> EdgeKeyOf g
+getEdgeKey (Edge (_, _, _, h)) = h
+{-# INLINE getEdgeKey #-}
 
 -- below code simulates a Functor by attaching a function to a graph
 -- and adds an api layer that tampers outputs with the function.

@@ -6,10 +6,9 @@ module MutGraph.Dijkstra (
     DijkstraLoopM, dijkstraLoopM,
     DijkstraScanM, dijkstraScanM,
 ) where
-import Prelude (($), Bool(..), Int, Num(..), Ord(..), Bounded(..), Traversable(..))
+import Containers.Prelude
 import MutGraph.Graph
 import MutState.State
-import Control.Monad hiding (replicateM)
 import MutContainers.PriorityQueue
 import MutContainers.Container
 import Control.Monad.ST

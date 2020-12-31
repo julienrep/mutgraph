@@ -1,11 +1,12 @@
 module Containers.Prelude
-  ( 
-    const,
+  ( const,
     id,
     flip,
     ($),
     (.),
     (<$>),
+    (!!),
+    (&&),
     Foldable (null),
     Traversable (..),
     Functor (..),
@@ -15,22 +16,28 @@ module Containers.Prelude
     Monad (..),
     Maybe (..),
     maybe,
+    Either (..),
+    Num (..),
+    Show (..),
     Eq (..),
     Ord (..),
+    Bounded (..),
+    Integral (..),
     Enum,
     Int,
-    Bool,
-    Num(..),
+    Double,
+    Bool (..),
     String,
     IO,
-    Show(..),
-    putStr, putStrLn,
+    putStr,
+    putStrLn,
     module Control.Monad,
+    fromIntegral,
   )
 where
 
-import Prelude
 import Control.Monad hiding (replicateM)
+import Prelude
 
 -- Purpose of this module is to wrap the Prelude dependency, and reexport only
--- safe non partial functions
+-- safe non partial functions.

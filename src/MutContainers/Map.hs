@@ -10,13 +10,13 @@ module MutContainers.Map (
         ReadAt(..),
     )
 where
-import Prelude ((<$>))
-import Control.Monad (Monad(..))
+import Containers.Prelude
 import MutState.State
 
 type family KeyOf (l :: *) :: *
 type family ValOf (l :: *) :: *
 
+type instance KeyOf [a] = Int
 type instance ValOf [a] = a
 
 class WriteM h where
@@ -46,3 +46,5 @@ modifyM h k f = (f <$> readC (cst h) k) >>= writeM h k
 {-# INLINE modifyM #-}
 
 class ReadAt h where at :: (k ~ KeyOf h, a ~ ValOf h) => h -> k -> a 
+
+instance ReadAt [a] where at = (!!)

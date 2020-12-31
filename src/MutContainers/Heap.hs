@@ -2,13 +2,11 @@ module MutContainers.Heap (
     Heap(..), MakeHeapM(..),
 )
 where
-import Prelude (Bounded(..), Num(..), Ord(..), Integral(..), Eq(..), ($), (<$>), const)
-import Data.Bool
-import Control.Monad
+import Containers.Prelude
+import Containers.Container (SizeOf)
 import MutContainers.PriorityQueue
 import MutContainers.Map
 import MutContainers.Container
-import Containers.Container (SizeOf)
 import MutState.State
 
 newtype Heap h = Heap h

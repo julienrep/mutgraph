@@ -2,10 +2,7 @@ module MutGraph.AdjacencyList (
     AdjList,
     AdjLst,
 ) where
-import Prelude (Num(..), Enum, (.), (<$>), ($))
-import Data.Foldable hiding (concat)
-import Data.Ord
-import Control.Monad
+import Containers.Prelude
 import Control.Monad.ST
 import Control.DeepSeq
 import Containers.List
