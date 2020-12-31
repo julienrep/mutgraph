@@ -50,9 +50,9 @@ instance (z ~ SizeOf (Heap h), Num z, Ord z) => IsEmptyC (Heap h) where
     isEmptyC heap = (== 0) <$> getSizeC heap
     {-# INLINE isEmptyC #-}
 
-instance (z ~ SizeOf (Heap h), Num z) => EmptyM (Heap h) where
-    emptyM heap = modifySizeM heap (const 0)
-    {-# INLINE emptyM #-}
+instance (z ~ SizeOf (Heap h), Num z) => ClearM (Heap h) where
+    clearM heap = modifySizeM heap (const 0)
+    {-# INLINE clearM #-}
 
 instance (
     q ~ Heap h,

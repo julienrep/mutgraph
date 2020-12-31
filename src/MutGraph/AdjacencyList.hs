@@ -62,14 +62,14 @@ type MutAdjListReqs g k h e l z i w v = (
     GetSizeC v,
     UFreezeC v,
     UThawM v,
-    MakeNewM v,
+    NewM v,
     GetSizeC w,
     ReadCC w,
     ReadMM w,
     WriteMM w,
     UFreezeC w,
     UThawM w,
-    MakeNewM w
+    NewM w
     )
 
 instance (NFData w) => NFData (AdjList l i w v k e) where
@@ -154,37 +154,32 @@ instance (MutAdjListReqs g k h e l z i w v) =>
 
 instance (MutAdjListReqs g k h e l z i w v, Ord k,
     EnsureSizeM (SizeViaNodes g),
-    Append l,
-    Replicate l,
+    Snoc l,
     Num (SizeOf l),
     MutToCst w,
     MutToCst v
     ) => AddGraphEdgeM (AdjList l i w v k e) where
     addGraphEdgeM graph (u, u', e) = do
         ensureSizeM (SizeViaNodes graph) (u' + 1)
-        let (AdjList w) = graph
-        v <- readMM w u
-        h <- (u,) <$> getSizeC (cst v)
-        cv <- ufreezeC (cst v)
-        nv <- uthawM (append cv (u', e))
-        writeMM w u nv
+        let (AdjList mw) = graph
+        mv <- readMM mw u
+        h <- (u,) <$> getSizeC (cst mv)
+        v <- ufreezeC (cst mv)
+        mvNew <- uthawM (snoc1 v (u', e))
+        writeMM mw u mvNew
         return h
         where
-        append v x = convert v2
+        snoc1 v x = v3
             where
-            v2 = v1 ++ replicate 1 x
-            v1 = convert v :: l (k, e)
+            v3 = convert v2
+            v2 :: l (k, e) = snoc v1 x
+            v1 = convert v
     {-# INLINE addGraphEdgeM #-}
 
 instance (MutAdjListReqs g k h e l z i w v) =>
-    MakeNewM (AdjList l i w v k e) where
-    makeNewM = AdjList <$> makeNewM
-    {-# INLINE makeNewM #-}
-
-instance (MutAdjListReqs g k h e l z i w v, MakeNewM (AdjList l i w v k e)) =>
-    MakeEmptyGraphM (AdjList l i w v k e) where
-    makeEmptyGraphM = makeNewM
-    {-# INLINE makeEmptyGraphM #-}
+    NewM (AdjList l i w v k e) where
+    newM = AdjList <$> newM
+    {-# INLINE newM #-}
 
 instance (MutAdjListReqs g k h e l z i w v, AddGraphEdgeM g) =>
     MakeGraphFromEdgesM (AdjList l i w v k e) list
@@ -239,7 +234,7 @@ instance (MutAdjListReqs g k h e l z i w v,
         n <- getSizeC (cst graph)
         let l :: l z = enumFromTo n (n + addedCount - 1)
         growSizeM mw addedCount
-        mapM_ (\k -> makeNewM >>= \v -> writeMM mw k v) l
+        mapM_ (\k -> newM >>= \v -> writeMM mw k v) l
     {-# INLINE growSizeM #-}
 
 instance (MutAdjListReqs g k h e l z i w v, ShrinkSizeM w) =>

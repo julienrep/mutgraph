@@ -77,7 +77,7 @@ instance (
         ReadC colors,
         ReplicateM colors,
         MutToCst colors,
-        EmptyM q,
+        ClearM q,
         IsEmptyC q,
         PushBackM q,
         PopFrontM q,
@@ -89,7 +89,7 @@ instance (
     ) => BfsM g colors q where
     bfsM preNode postNode ascEdge descEdge queue colors graph _u = do
         listGraphNodesC (cst graph) >>= mapM_ (\k -> writeM colors k Unvisited)
-        emptyM queue
+        clearM queue
         pushBackM queue _u
         writeM colors _u Visiting
         loop where

@@ -19,10 +19,11 @@ module MutState.State
     writeVar,
     modifyVar,
     newVar,
+    RealWorld,
   )
 where
 
-import Control.Monad.Primitive (PrimMonad (..))
+import Control.Monad.Primitive (PrimMonad (..), RealWorld)
 import Data.Coerce (Coercible, coerce)
 import Data.Primitive.MutVar
   ( MutVar,

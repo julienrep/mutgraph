@@ -76,7 +76,7 @@ instance (
     WriteM scanned,
     WriteM labels,
     Bounded e,
-    EmptyM q,
+    ClearM q,
     Ord k,
     InsertValM q,
     Traversable l,
@@ -89,7 +89,7 @@ instance (
                 writeM labels k infinity
                 writeM scanned k False)
         writeM labels source 0
-        emptyM queue
+        clearM queue
         insertValM queue (0, source)
     {-# INLINE dijkstraInitM #-}
 

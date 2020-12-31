@@ -16,9 +16,10 @@ module MutGraph.Graph (
     ListGraphEdgesFromC(..),
     ListGraphEdgesC(..),
     AddGraphEdgeM(..),
-    MakeEmptyGraphM(..),
     MakeGraphFromEdgesM(..),
     ParseEdgesFromFileM(..),
+
+    makeEmptyGraphM,
 
     getEdgeTail,
     getEdgeHead,
@@ -31,6 +32,7 @@ module MutGraph.Graph (
 ) where
 import Containers.Prelude
 import MutState.State
+import MutContainers.Container
 
 type family VertexKeyOf g :: *
 type family EdgeKeyOf g :: *
@@ -101,15 +103,17 @@ class ListGraphEdgesC g where
 class AddGraphEdgeM g where
     addGraphEdgeM :: (MutMonad s m, GraphReqs g k h e l z) =>
         Mut s g -> (k, k, e) -> m h
-class MakeEmptyGraphM g where
-    makeEmptyGraphM :: (MutMonad s m, GraphReqs g k h e l z) => m (Mut s g)
+
+makeEmptyGraphM :: (MutMonad s m, GraphReqs g k h e l z, NewM g) => m (Mut s g)
+makeEmptyGraphM = newM
+
 class MakeGraphFromEdgesM g list where
     makeGraphFromEdgesM ::
         (MutMonad s m, GraphReqs g k h e l z, Foldable list) =>
         list (k, k, e) -> m (Mut s g)
     default makeGraphFromEdgesM ::  
         (MutMonad s m, GraphReqs g k h e l z, Foldable list) =>
-        (AddGraphEdgeM g, MakeEmptyGraphM g) =>
+        (AddGraphEdgeM g, NewM g) =>
         list (k, k, e) -> m (Mut s g)
     makeGraphFromEdgesM edges = do
         graph <- makeEmptyGraphM

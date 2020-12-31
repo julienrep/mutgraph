@@ -166,18 +166,18 @@ instance (ReadAt (DVec v k a)) => ReadAt (DVecM v k a) where
 
 -- MutContainers.Container
 
-instance (mv ~ V.Mutable v, VM.MVector mv a) => MakeNewM (Vec v k a) where
-    makeNewM = MVec <$> VM.new 0
-    {-# INLINE makeNewM #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a) => MakeNewM (DVec v k a) where
-    makeNewM = MDVec <$> (VM.new 0 >>= newVar)
-    {-# INLINE makeNewM #-}
-instance (forall b . V.Vector v b, UThawM (VecM v k a)) => MakeNewM (VecM v k a) where
-    makeNewM = uthawM (VecM V.empty)
-    {-# INLINE makeNewM #-}
-instance (forall b . V.Vector v b, UThawM (DVecM v k a)) => MakeNewM (DVecM v k a) where
-    makeNewM = uthawM (DVecM V.empty)
-    {-# INLINE makeNewM #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => NewM (Vec v k a) where
+    newM = MVec <$> VM.new 0
+    {-# INLINE newM #-}
+instance (mv ~ V.Mutable v, VM.MVector mv a) => NewM (DVec v k a) where
+    newM = MDVec <$> (VM.new 0 >>= newVar)
+    {-# INLINE newM #-}
+instance (forall b . V.Vector v b, UThawM (VecM v k a)) => NewM (VecM v k a) where
+    newM = uthawM (VecM V.empty)
+    {-# INLINE newM #-}
+instance (forall b . V.Vector v b, UThawM (DVecM v k a)) => NewM (DVecM v k a) where
+    newM = uthawM (DVecM V.empty)
+    {-# INLINE newM #-}
 instance (V.Vector v a) => FreezeC (Vec v k a) where
     freezeC (MVec mv) = Vec <$> V.freeze mv
     {-# INLINE freezeC #-}

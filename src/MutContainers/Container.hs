@@ -1,11 +1,11 @@
 module MutContainers.Container (
-    MakeNewM(..),
+    NewM(..),
     FreezeC(..),
     UFreezeC(..),
     ThawM(..),
     UThawM(..),
     IsEmptyC(..),
-    EmptyM(..),
+    ClearM(..),
     GetSizeC(..),
     GrowSizeM(..),
     ShrinkSizeM(..),
@@ -18,8 +18,8 @@ import Containers.Container ( SizeOf )
 import MutState.State
 
 
-class MakeNewM l where
-    makeNewM :: (MutMonad s m) => m (Mut s l)
+class NewM l where
+    newM :: (MutMonad s m) => m (Mut s l)
 class FreezeC l where
     freezeC :: (MutMonad s m) => Cst s l -> m l
 class UFreezeC l where
@@ -30,8 +30,8 @@ class UThawM l where
     uthawM :: (MutMonad s m) => l -> m (Mut s l)
 class IsEmptyC l where
     isEmptyC :: (MutMonad s m) => Cst s l -> m Bool
-class EmptyM l where
-    emptyM :: (MutMonad s m) => Mut s l -> m ()
+class ClearM l where
+    clearM :: (MutMonad s m) => Mut s l -> m ()
 
 class GetSizeC x where
     getSizeC :: (MutMonad s m, z ~ SizeOf x) => Cst s x -> m z
