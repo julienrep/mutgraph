@@ -3,9 +3,9 @@ module MutContainers.PriorityQueue (
     InsertValM(..),
 )
 where
-import Prelude
-import MutState.State
+import Containers.Prelude
 import MutContainers.Map
+import MutState.State
 
 class ExtractMinM q where
     extractMinM :: (MutMonad s m, a ~ ValOf q, Ord a) => Mut s q -> m a 

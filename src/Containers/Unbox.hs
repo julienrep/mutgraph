@@ -1,4 +1,4 @@
-module MutContainers.Unbox (
+module Containers.Unbox (
     Unbox,
     module Data.Vector.Unboxed.Deriving,
 )

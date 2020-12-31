@@ -14,8 +14,8 @@ import Prelude ((<$>))
 import Control.Monad (Monad(..))
 import MutState.State
 
-type family KeyOf (l :: k) :: *
-type family ValOf (l :: k) :: *
+type family KeyOf (l :: *) :: *
+type family ValOf (l :: *) :: *
 
 type instance ValOf [a] = a
 

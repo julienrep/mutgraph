@@ -1,8 +1,8 @@
-module MutContainers.Run (
+module MutState.Run (
     run,
     runM
 ) where
-import Prelude
+import MutState.State ( MutMonad )
 
 run :: () => 
     (genericInputs -> inputs) -> (inputs -> outputs) -> (outputs -> genericOutputs) ->
@@ -12,7 +12,7 @@ run importInputs runTest exportOutputs genericInputs = exportOutputs outputs
     outputs = runTest inputs
     inputs = importInputs genericInputs
 
-runM :: (Monad m) => 
+runM :: (MutMonad s m) => 
     (genericInputs -> m inputs) -> (inputs -> m outputs) -> (outputs -> m genericOutputs) ->
     (genericInputs -> m genericOutputs)
 runM importInputs runTest exportOutputs genericInputs = do

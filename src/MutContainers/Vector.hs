@@ -6,8 +6,8 @@ module MutContainers.Vector (
     DVector, DVectorU, DVectorS, DVectorM,
 )
 where
-import Prelude
-import Control.Monad
+import qualified Prelude as P (enumFrom)
+import Containers.Prelude
 import Control.DeepSeq
 import Containers.NonEmpty
 import Containers.List
@@ -21,30 +21,24 @@ import qualified Data.Vector.Generic.Mutable   as VM
 import qualified Data.Vector                   as VI
 import qualified Data.Vector.Unboxed           as VU
 import qualified Data.Vector.Storable          as VS
--- import qualified Data.Vector.Mutable           as VMI
--- import qualified Data.Vector.Unboxed.Mutable   as VMU
--- import qualified Data.Vector.Storable.Mutable  as VMS
+
+type VecKey = Int
+type VecSize = Int
 
 newtype Vec (v :: * -> *) (k :: *) (a :: *) = Vec (v a)
 newtype MVec (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = MVec (mv s a)
 type instance Mut s (Vec v k a) = MVec (V.Mutable v) s k a
 type instance Cst s (Vec v k a) = MVec (V.Mutable v) s k a
-type instance KeyOf (Vec v) = Int
-type instance SizeOf (Vec v) = Int
-type instance KeyOf (Vec v k) = k
-type instance SizeOf (Vec v k) = Int
+type instance SizeOf (Vec v k) = VecSize
 type instance ValOf (Vec v k a) = a
 type instance KeyOf (Vec v k a) = k
-type instance SizeOf (Vec v k a) = Int
+type instance SizeOf (Vec v k a) = SizeOf (Vec v k)
 
 newtype DVec (v :: * -> *) (k :: *) (a :: *) = DVec (v a)
 newtype MDVec (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = 
     MDVec (Mut s (Var (mv s a)))
 type instance Mut s (DVec v k a) = MDVec (V.Mutable v) s k a
 type instance Cst s (DVec v k a) = MDVec (V.Mutable v) s k a
-type instance KeyOf (DVec v) = KeyOf (Vec v)
-type instance SizeOf (DVec v) = SizeOf (Vec v)
-type instance KeyOf (DVec v k) = KeyOf (Vec v k)
 type instance SizeOf (DVec v k) = SizeOf (Vec v k)
 type instance ValOf (DVec v k a) = ValOf (Vec v k a)
 type instance KeyOf (DVec v k a) = KeyOf (Vec v k a)
@@ -54,9 +48,6 @@ newtype VecM (v :: * -> *) (k :: *) (a :: *) = VecM (v a)
 newtype MVecM (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) = MVecM (mv s a)
 type instance Mut s (VecM v k a) = MVecM (V.Mutable v) s k (Mut s a)
 type instance Cst s (VecM v k a) = MVecM (V.Mutable v) s k (Cst s a)
-type instance KeyOf (VecM v) = KeyOf (Vec v)
-type instance SizeOf (VecM v) = SizeOf (Vec v)
-type instance KeyOf (VecM v k) = KeyOf (Vec v k)
 type instance SizeOf (VecM v k) = SizeOf (Vec v k)
 type instance ValOf (VecM v k a) = ValOf (Vec v k a)
 type instance KeyOf (VecM v k a) = KeyOf (Vec v k a)
@@ -67,9 +58,6 @@ newtype MDVecM (mv :: * -> * -> *) (s :: *) (k :: *) (a :: *) =
     MDVecM (Mut s (Var (mv s a)))
 type instance Mut s (DVecM v k a) = MDVecM (V.Mutable v) s k (Mut s a)
 type instance Cst s (DVecM v k a) = MDVecM (V.Mutable v) s k (Cst s a)
-type instance KeyOf (DVecM v) = KeyOf (Vec v)
-type instance SizeOf (DVecM v) = SizeOf (Vec v)
-type instance KeyOf (DVecM v k) = KeyOf (Vec v k)
 type instance SizeOf (DVecM v k) = SizeOf (Vec v k)
 type instance ValOf (DVecM v k a) = ValOf (Vec v k a)
 type instance KeyOf (DVecM v k a) = KeyOf (Vec v k a)
@@ -133,10 +121,10 @@ instance NFData (MDVecM v s k a) where rnf (MDVecM _) = ()
 
 -- Map
 
-instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ KeyOf (Vec v)) => WriteM (Vec v k a) where
+instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ VecKey) => WriteM (Vec v k a) where
     writeM (MVec mv) = VM.unsafeWrite mv
     {-# INLINE writeM #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ KeyOf (Vec v)) => WriteM (DVec v k a) where
+instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ VecKey) => WriteM (DVec v k a) where
     writeM (MDVec vl) k a = readVar vl >>= \l -> VM.unsafeWrite l k a
     {-# INLINE writeM #-}
 instance (forall b . WriteM (Vec v k b)) => WriteMM (VecM v k a) where
@@ -145,10 +133,10 @@ instance (forall b . WriteM (Vec v k b)) => WriteMM (VecM v k a) where
 instance (forall b . WriteM (DVec v k b)) => WriteMM (DVecM v k a) where
     writeMM (MDVecM mv) = writeM (MDVec mv)
     {-# INLINE writeMM #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ KeyOf (Vec v)) => ReadC (Vec v k a) where
+instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ VecKey) => ReadC (Vec v k a) where
     readC (MVec mv) = VM.unsafeRead mv
     {-# INLINE readC #-}
-instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ KeyOf (Vec v)) => ReadC (DVec v k a) where
+instance (mv ~ V.Mutable v, VM.MVector mv a, k ~ VecKey) => ReadC (DVec v k a) where
     readC (MDVec vl) k = readVar vl >>= \l -> VM.unsafeRead l k
     {-# INLINE readC #-}
 instance (forall b . ReadC (Vec v k b)) => ReadCC (VecM v k a) where
@@ -163,10 +151,10 @@ instance (forall b . ReadC (Vec v k b)) => ReadMM (VecM v k a) where
 instance (forall b . ReadC (DVec v k b)) => ReadMM (DVecM v k a) where
     readMM (MDVecM mv) = readC (MDVec mv)
     {-# INLINE readMM #-}
-instance (V.Vector v a, k ~ KeyOf (Vec v)) => ReadAt (Vec v k a) where
+instance (V.Vector v a, k ~ VecKey) => ReadAt (Vec v k a) where
     at (Vec v) = (V.!) v
     {-# INLINE at #-}
-instance (V.Vector v a, k ~ KeyOf (Vec v)) => ReadAt (DVec v k a) where
+instance (V.Vector v a, k ~ VecKey) => ReadAt (DVec v k a) where
     (DVec v) `at` u = v V.! u
     {-# INLINE at #-}
 instance (ReadAt (Vec v k a)) => ReadAt (VecM v k a) where
@@ -237,7 +225,7 @@ instance (mv ~ V.Mutable v, VM.MVector mv a) => GrowSizeM (DVec v k a) where
     growSizeM (MDVec vl) n = readVar vl >>= flip VM.unsafeGrow n >>= writeVar vl
     {-# INLINE growSizeM #-}
 instance (mv ~ V.Mutable v, VM.MVector mv a) => ShrinkSizeM (DVec v k a) where
-    shrinkSizeM (MDVec vl) n = readVar vl >>= \l -> writeVar vl (VM.unsafeSlice 0 n l)
+    shrinkSizeM (MDVec vl) n = readVar vl >>= \l -> writeVar vl (VM.unsafeSlice 0 (VM.length l - n) l)
     {-# INLINE shrinkSizeM #-}
 instance (mv ~ V.Mutable v, VM.MVector mv a) => ModifySizeM (DVec v k a) where
     modifySizeM x f = do
@@ -336,7 +324,7 @@ instance (forall b . V.Vector v b) => EnumFromTo (Vec v k) where
     enumFromTo a b = Vec $ V.enumFromTo a b --Vec $ V.enumFromN a (b - a + 1)
     {-# INLINE enumFromTo #-}
 instance (forall b . V.Vector v b) => EnumFrom (Vec v k) where
-    enumFrom a = Vec $ V.fromList (Prelude.enumFrom a)
+    enumFrom a = Vec $ V.fromList (P.enumFrom a)
     {-# INLINE enumFrom #-}
 instance (forall b . V.Vector v b) => Append (Vec v k) where
     (Vec v) ++ (Vec v') = Vec $ v V.++ v'
@@ -360,27 +348,3 @@ instance (mv ~ V.Mutable v, VM.MVector mv a) => ReplicateM (DVec v k a) where
     replicateM n v = MDVec <$> (VM.replicateM n v >>= newVar)
     {-# INLINE replicateM #-}
 
-
--- mono-traversable support
--- type instance Element (Vec v k a) = a
--- type instance Element (DVec v a) = a
--- instance (MonoFunctor (v a), Element (v a) ~ a) => MonoFunctor ((Vec v k) a) where
---     omap f (Vec l) = Vec (omap f l)
---     {-# inline omap #-}
--- instance (MonoFunctor (v a), Element (v a) ~ a) => MonoFunctor ((DVec v) a) where
---     omap f (DVec l) = DVec (omap f l)
---     {-# inline omap #-}
--- instance (MonoFoldable (v a), Element (v a) ~ a) => MonoFoldable ((Vec v k) a) where
---     ofoldMap f (Vec l) = ofoldMap f l
---     {-# INLINE ofoldMap #-}
---     ofoldr f z (Vec l) = ofoldr f z l
---     {-# INLINE ofoldr #-}
---     ofoldl' x b (Vec l) = ofoldl' x b l
---     {-# INLINE ofoldl' #-}
---     ofoldr1Ex x (Vec l) = ofoldr1Ex x l
---     {-# INLINE ofoldr1Ex #-}
---     ofoldl1Ex' x (Vec l) = ofoldl1Ex' x l
---     {-# INLINE ofoldl1Ex' #-}
--- instance (MonoTraversable (v a), Element (v a) ~ a) => MonoTraversable ((Vec v k) a) where
---     otraverse f (Vec l) = fmap Vec (otraverse f l)
---     {-# INLINE otraverse #-}

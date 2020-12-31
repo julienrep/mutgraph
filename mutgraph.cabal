@@ -22,24 +22,24 @@ source-repository head
 library
   exposed-modules:
       Containers.Prelude
+      Containers.Curry
+      Containers.Unbox
       Containers.Container
       Containers.NonEmpty
       Containers.List
-      MutGraph.Graph
-      MutGraph.AdjacencyList
-      MutGraph.Dijkstra
-      MutGraph.GraphSearch
-      MutGraph.Parser
-      MutContainers.Run
-      MutContainers.Curry
+      MutState.State
+      MutState.Run
       MutContainers.Vector
-      MutContainers.Unbox
       MutContainers.Container
       MutContainers.Map
       MutContainers.PriorityQueue
       MutContainers.Heap
       MutContainers.List
-      MutState.State
+      MutGraph.Graph
+      MutGraph.AdjacencyList
+      MutGraph.Dijkstra
+      MutGraph.GraphSearch
+      MutGraph.Parser
       Tests
       Tests.MutGraph.Dijkstra
       Tests.Sandbox

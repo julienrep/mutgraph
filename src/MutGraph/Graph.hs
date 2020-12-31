@@ -34,7 +34,7 @@ import Prelude
 import Control.Monad
 import MutState.State
 import Control.DeepSeq
-import MutContainers.Unbox
+import Containers.Unbox
 
 type family VertexKeyOf g :: *
 type family EdgeKeyOf g :: *

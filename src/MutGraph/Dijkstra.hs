@@ -16,9 +16,9 @@ import Control.Monad.ST
 import Containers.List
 import MutContainers.List
 import MutContainers.Vector
-import MutContainers.Unbox
-import MutContainers.Run
-import MutContainers.Curry
+import Containers.Unbox
+import MutState.Run
+import Containers.Curry
 import MutContainers.Heap
 import MutContainers.Map
 import Containers.Container

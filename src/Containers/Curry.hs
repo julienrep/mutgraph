@@ -1,4 +1,4 @@
-module MutContainers.Curry (
+module Containers.Curry (
     Curry, curryN, uncurryN,
 ) where
 
