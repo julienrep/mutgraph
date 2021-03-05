@@ -3,44 +3,16 @@ module MutGraph.Parser
   )
 where
 
--- import Control.DeepSeq
-import Containers.Container
 import Containers.List
 import Containers.NonEmpty
 import Containers.Prelude
 import Control.Exception
+-- import qualified Data.ByteString.Char8 as C
 import qualified Data.ByteString.Lazy.Char8 as C
 import MutContainers.Map
 import MutGraph.Graph
 import System.IO
-
-parseInt :: C.ByteString -> Int
-parseInt s = let Just (n, _) = C.readInt s in n
-
-parseHeaderNodeCount :: (ReadAt h, Num (KeyOf h), ValOf h ~ C.ByteString) => h -> Int
-parseHeaderNodeCount x = parseInt (x `at` 0)
-
-parseHeaderEdgeCount :: (ReadAt h, Num (KeyOf h), ValOf h ~ C.ByteString) => h -> Int
-parseHeaderEdgeCount x = parseInt (x `at` 1)
-
-parseEdgeTail :: (ReadAt h, Num (KeyOf h), ValOf h ~ C.ByteString) => h -> Int
-parseEdgeTail x = parseInt (x `at` 0)
-
-parseEdgeHead :: (ReadAt h, Num (KeyOf h), ValOf h ~ C.ByteString) => h -> Int
-parseEdgeHead x = parseInt (x `at` 1)
-
-parseEdgeWeight :: (ReadAt h, Num (KeyOf h), ValOf h ~ C.ByteString) => h -> Int
-parseEdgeWeight x = parseInt (x `at` 2)
-
-parseEdgeWData :: C.ByteString -> (Int, Int, Int)
-parseEdgeWData line = (parseEdgeTail x, parseEdgeHead x, parseEdgeWeight x)
-  where
-    x = C.words line
-
-parseHeader :: C.ByteString -> (Int, Int)
-parseHeader line = (parseHeaderNodeCount x, parseHeaderEdgeCount x)
-  where
-    x = C.words line
+import Data.Char
 
 newtype SimpleParser = SimpleParser String
 
@@ -51,27 +23,45 @@ instance
   -- Empty l,
   -- Functor l,
   -- Convert [C.ByteString] (l C.ByteString)
-
   ParseEdgesFromFileM SimpleParser [] Int Int Int
   where
   parseEdgesFromFileM (SimpleParser fileName) = do
     x <- try parse
     case x of
       Left (_ :: SomeException) -> return Nothing
-      Right r -> return (Just r)
+      Right r -> return r
     where
       parse = do
         file <- openFile fileName ReadMode
         contents <- C.hGetContents file
-        let lines = convert (C.lines contents)
+        let lines = C.lines contents
         case toNonEmpty lines of
-          Nothing -> return (empty, 0, 0)
+          Nothing -> return Nothing
           Just nelines -> do
             let headerLine = head nelines
             let fileLines = tail nelines
-            let (nodeCount, edgeCount) = parseHeader headerLine
-            let edges = fmap parseEdgeWData fileLines
-            -- evaluate (rnf (edges, nodeCount, edgeCount))
-            -- hClose file
-            return (edges, nodeCount, edgeCount)
+            let (nodeCount, edgeCount) =
+                  case parseHeader headerLine of
+                    Nothing -> (0, 0)
+                    Just (a, b) -> (a, b)
+            let edges = fmap _parseEdgeData fileLines
+            return (Just (edges, nodeCount, edgeCount))
+      parseHeader line = do
+        nodeCount <- parseInt (words `at` 0)
+        edgeCount <- parseInt (words `at` 1)
+        return (nodeCount, edgeCount)
+        where
+          words = C.words line
+          parseInt s = case C.readInt s of
+              Nothing -> Nothing
+              Just (n, _) -> Just n
+      _parseEdgeData line = (t, h, w)
+        where
+          (t, lineAfterTail) = _parseNextInt line
+          (h, lineAfterHead) = _parseNextInt lineAfterTail
+          (w, _) = _parseNextInt lineAfterHead
+          _parseNextInt = _parseInt . C.dropWhile isSpace
+          -- non exhaustive matching is unsafe but has much less mem usage
+          -- probably because of better lazy optimizations.
+          _parseInt s = let Just (n, bs) = C.readInt s in (n, bs)
   {-# INLINE parseEdgesFromFileM #-}
